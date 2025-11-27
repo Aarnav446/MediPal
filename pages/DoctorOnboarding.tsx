@@ -72,7 +72,7 @@ const SPECIALTY_DATA: Record<string, {
         ]
     },
     'General Practitioner': {
-        branches: ['Family Medicine', 'Geriatrics', 'Preventive Medicine', 'Travel Medicine'],
+        branches: ['Family Medicine', 'Geriatrics', 'Preventive Medicine', 'Travel Medicine', 'Chronic Disease Management'],
         questions: [
             {
                 question: "A 45-year-old male presents with BP 150/95 on two separate occasions. Lifestyle modifications failed. What is the first-line pharmacotherapy?",
@@ -88,6 +88,66 @@ const SPECIALTY_DATA: Record<string, {
                 question: "A patient with Type 2 Diabetes has an eGFR of 45. Which oral hypoglycemic agent should be used with caution or dose-reduced?",
                 options: ["Metformin", "Insulin", "Glipizide", "Pioglitazone"],
                 correct: 0
+            }
+        ]
+    },
+    'Dentist': {
+        branches: ['Orthodontics', 'Endodontics', 'Periodontics', 'Oral Surgery', 'Pediatric Dentistry'],
+        questions: [
+            {
+                question: "Which of the following is the most common cause of endodontic failure?",
+                options: ["Inadequate obturation", "Perforation", "Missed canal", "Fractured instrument"],
+                correct: 0
+            },
+            {
+                question: "What is the primary bacteria associated with dental caries initiation?",
+                options: ["Lactobacillus", "Streptococcus mutans", "Porphyromonas gingivalis", "Actinomyces"],
+                correct: 1
+            },
+            {
+                question: "Class II malocclusion is characterized by:",
+                options: ["Mesiobuccal cusp of upper first molar occluding with buccal groove of lower first molar", "Distobuccal cusp of upper first molar occluding with buccal groove of lower first molar", "Mesiobuccal cusp of upper first molar occluding anterior to buccal groove of lower first molar", "None of the above"],
+                correct: 2
+            }
+        ]
+    },
+    'Neurologist': {
+        branches: ['Epilepsy', 'Stroke Medicine', 'Neuromuscular', 'Movement Disorders', 'Headache Medicine'],
+        questions: [
+            {
+                question: "Which of the following is the acute treatment of choice for an ischemic stroke within 3 hours of onset?",
+                options: ["Aspirin", "Heparin", "tPA (Alteplase)", "Warfarin"],
+                correct: 2
+            },
+            {
+                question: "Resting tremor, rigidity, bradykinesia, and postural instability are cardinal signs of:",
+                options: ["Alzheimer's Disease", "Parkinson's Disease", "Huntington's Disease", "ALS"],
+                correct: 1
+            },
+            {
+                question: "Which seizure type involves a brief loss of consciousness without convulsions, common in children?",
+                options: ["Tonic-Clonic", "Absence", "Myoclonic", "Atonic"],
+                correct: 1
+            }
+        ]
+    },
+    'Psychiatrist': {
+        branches: ['Addiction Psychiatry', 'Child & Adolescent', 'Forensic Psychiatry', 'Geriatric Psychiatry', 'Psychosomatic Medicine'],
+        questions: [
+            {
+                question: "Which class of medications is the first-line treatment for Major Depressive Disorder?",
+                options: ["Benzodiazepines", "MAOIs", "SSRIs", "Tricyclic Antidepressants"],
+                correct: 2
+            },
+            {
+                question: "Auditory hallucinations and paranoid delusions are positive symptoms of:",
+                options: ["Bipolar Disorder", "Schizophrenia", "Generalized Anxiety Disorder", "Obsessive-Compulsive Disorder"],
+                correct: 1
+            },
+            {
+                question: "Lithium is commonly used as a mood stabilizer for:",
+                options: ["Major Depression", "Bipolar Disorder", "Panic Disorder", "ADHD"],
+                correct: 1
             }
         ]
     }
@@ -279,7 +339,7 @@ const DoctorOnboarding: React.FC<DoctorOnboardingProps> = ({ navigate }) => {
                 </div>
 
                 {/* Dynamic Sub-Specialty Survey */}
-                {formData.specialty && SPECIALTY_DATA[formData.specialty] && (
+                {formData.specialty && SPECIALTY_DATA[formData.specialty] ? (
                     <div className="bg-slate-50 p-5 rounded-xl border border-slate-200 mt-4 animate-fade-in">
                         <h3 className="text-sm font-bold text-medical-800 uppercase tracking-wide mb-3">
                             Specialized Focus (Survey)
@@ -301,7 +361,11 @@ const DoctorOnboarding: React.FC<DoctorOnboardingProps> = ({ navigate }) => {
                             ))}
                         </div>
                     </div>
-                )}
+                ) : formData.specialty ? (
+                    <div className="p-4 bg-yellow-50 text-yellow-700 rounded-lg text-sm">
+                        Standard competency test will be applied for {formData.specialty}.
+                    </div>
+                ) : null}
                 
                 {/* File Uploads */}
                 <div className="space-y-3 pt-6 border-t border-slate-100 mt-6">
@@ -313,7 +377,7 @@ const DoctorOnboarding: React.FC<DoctorOnboardingProps> = ({ navigate }) => {
                                     <span className="block text-sm font-bold text-slate-700">Medical License</span>
                                     {docs.license && <span className="text-xs text-green-600 font-medium">{docs.license.name}</span>}
                                 </div>
-                                <input type="file" onChange={(e) => handleFileChange(e, 'license')} className="hidden"/>
+                                <input type="file" onChange={(e) => handleFileChange(e, 'license')} className="hidden" accept=".pdf,.jpg,.png"/>
                                 <span className={`px-3 py-1 rounded text-xs font-bold ${docs.license ? 'bg-green-200 text-green-800' : 'bg-slate-200 text-slate-600'}`}>
                                     {docs.license ? 'Uploaded' : 'Upload'}
                                 </span>
@@ -341,7 +405,7 @@ const DoctorOnboarding: React.FC<DoctorOnboardingProps> = ({ navigate }) => {
             </div>
         )}
 
-        {/* STEP 2: Practice Info (Unchanged Logic, just rendering) */}
+        {/* STEP 2: Practice Info */}
         {step === 2 && (
              <div className="space-y-4 animate-fade-in">
                  <div>

@@ -21,6 +21,10 @@ export const initDB = () => {
   // Doctor Settings Table
   alasql('CREATE TABLE IF NOT EXISTS doctor_settings (doctor_id STRING, consultation_modes STRING, time_slots STRING)');
 
+  // CLEANUP: Remove dummy data requested by user
+  alasql('DELETE FROM doctors WHERE name LIKE "%John Doe%" OR name LIKE "%Aarnav%"');
+  alasql('DELETE FROM users WHERE name LIKE "%John Doe%" OR name LIKE "%Aarnav%"');
+
   // Seed Data only if users table is empty
   const userCount = alasql('SELECT VALUE COUNT(*) FROM users');
   if (userCount === 0) {

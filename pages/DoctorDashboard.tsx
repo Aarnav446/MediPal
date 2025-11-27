@@ -86,13 +86,15 @@ const DoctorDashboard: React.FC = () => {
       setUploadingDocs(true);
       // Simulate upload process
       setTimeout(() => {
-          // If they were not verified, this might trigger a verification request workflow.
-          // For this demo, we assume uploading valid docs verifies them or re-verifies them.
           updateDoctorProfile(user.doctorId!, { verified: true });
-          fetchProfile(); // Refresh profile to see verified status if it changed
+          
+          // Force refresh of profile to update UI immediately
+          const updatedProfile = getDoctorProfile(user.doctorId!);
+          setDoctorProfile(updatedProfile);
+          
           setUploadingDocs(false);
           setUploadDocs({ license: null, degree: null, certs: null });
-          alert("Documents uploaded successfully. Profile updated.");
+          alert("Documents uploaded successfully. Your profile is now Verified.");
       }, 1500);
   };
 
