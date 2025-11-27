@@ -34,7 +34,7 @@ export const analyzeSymptomsWithGemini = async (
   const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
 
   const prompt = `
-    You are MediMatch AI, a highly advanced and compassionate medical triage assistant. 
+    You are MediMatch AI, a highly advanced medical triage assistant. 
     Analyze the user's symptoms provided in the text (and image if provided).
     
     Your goal is to:
@@ -42,16 +42,15 @@ export const analyzeSymptomsWithGemini = async (
     2. Assign a confidence score (0-100) indicating how certain you are about this specialization.
     3. Determine the urgency level (Low, Medium, or High).
     4. Provide a detailed, empathetic, and personalized explanation.
-       - Address the user directly ("You mentioned...").
-       - Explain *why* their specific symptoms lead to this conclusion.
-       - If an image is provided, reference visible features (e.g., "The redness and swelling in the image suggests...").
-    5. List 1-3 potential medical conditions (diseases or issues) that matches these symptoms (e.g., "Eczema", "Migraine", "Hypertension").
-    
+    5. List 1-3 potential medical conditions (diseases or issues) that match these symptoms (e.g., "Psoriasis", "Migraine", "Hypertension"). BE VERY SPECIFIC with disease names.
+    6. Recommend the generally accepted "Best/Fastest" treatment modality (e.g., "Allopathy", "Ayurveda", "Homeopathy", "Physiotherapy") for this specific condition based on standard medical efficacy data.
+    7. Provide a short reasoning for why this treatment modality is recommended (e.g., "Allopathy is recommended for faster symptom relief in acute cases...").
+
     The 'specialist' field MUST be one of the following strings exactly:
     ${JSON.stringify(VALID_SPECIALIZATIONS)}
     
     If the symptoms are vague or don't match a specific specialist, default to "General Practitioner".
-    If the situation seems life-threatening (e.g., chest pain, difficulty breathing, severe bleeding, signs of stroke/heart attack), YOU MUST set urgency to "High".
+    If the situation seems life-threatening (e.g., chest pain, difficulty breathing, severe bleeding), YOU MUST set urgency to "High".
   `;
 
   const schema = {
@@ -64,9 +63,11 @@ export const analyzeSymptomsWithGemini = async (
       potential_conditions: {
         type: Type.ARRAY,
         items: { type: Type.STRING }
-      }
+      },
+      recommended_treatment_type: { type: Type.STRING },
+      treatment_reasoning: { type: Type.STRING }
     },
-    required: ["specialist", "match_score", "urgency", "explanation", "potential_conditions"],
+    required: ["specialist", "match_score", "urgency", "explanation", "potential_conditions", "recommended_treatment_type", "treatment_reasoning"],
   };
 
   try {
@@ -113,7 +114,6 @@ export const analyzeSymptomsWithGemini = async (
     let explanation = aiResult.explanation;
     if (urgency === 'High') {
         const warningPrefix = "CRITICAL WARNING: Based on your symptoms, IMMEDIATE medical attention is recommended. Please call emergency services (911) or proceed to the nearest Emergency Room right away. ";
-        // Prepend warning if not already present in some form
         if (!explanation.toLowerCase().includes("emergency services") && !explanation.toLowerCase().includes("call 911")) {
             explanation = warningPrefix + "\n\n" + explanation;
         }
@@ -141,6 +141,8 @@ export const analyzeSymptomsWithGemini = async (
       let score = aiResult.match_score; 
       
       // Bonus points for keyword matches in specialties or bio
+      // We significantly boost the weight (20 points) for specific disease matches 
+      // to ensure experts in that specific field (e.g., Psoriasis) bubble to the top.
       let matches = 0;
       const docText = (doc.specialties.join(' ') + ' ' + doc.bio).toLowerCase();
       
@@ -150,8 +152,8 @@ export const analyzeSymptomsWithGemini = async (
         }
       });
       
-      // Add 5 points per match, but don't exceed 99
-      const finalScore = Math.min(99, score + (matches * 5));
+      // Add 20 points per match (aggressive weighting for experts), cap at 99
+      const finalScore = Math.min(99, score + (matches * 20));
       
       return { ...doc, compatibility_score: finalScore };
     });
@@ -169,6 +171,8 @@ export const analyzeSymptomsWithGemini = async (
       explanation: explanation,
       potential_conditions: conditions,
       recommended_doctors: recommendedDoctors,
+      recommended_treatment_type: aiResult.recommended_treatment_type,
+      treatment_reasoning: aiResult.treatment_reasoning
     };
 
   } catch (error) {
@@ -180,7 +184,9 @@ export const analyzeSymptomsWithGemini = async (
       urgency: "Low",
       explanation: "We encountered an error analyzing your symptoms. Please consult a General Practitioner directly. (Error: " + (error as Error).message + ")",
       potential_conditions: [],
-      recommended_doctors: MOCK_DOCTORS.filter(d => d.specialization === 'General Practitioner').slice(0,3).map(d => ({...d, compatibility_score: 50}))
+      recommended_doctors: MOCK_DOCTORS.filter(d => d.specialization === 'General Practitioner').slice(0,3).map(d => ({...d, compatibility_score: 50})),
+      recommended_treatment_type: "Consultation",
+      treatment_reasoning: "Please consult a doctor for a proper treatment plan."
     };
   }
 };

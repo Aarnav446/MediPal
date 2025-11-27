@@ -19,6 +19,8 @@ export interface AnalysisResult {
   explanation: string;
   potential_conditions: string[]; // List of suspected diseases/conditions
   recommended_doctors: Doctor[];
+  recommended_treatment_type?: string; // e.g., "Allopathy", "Ayurveda"
+  treatment_reasoning?: string; // Why this modality was chosen
 }
 
 export interface SymptomInputData {
@@ -26,10 +28,31 @@ export interface SymptomInputData {
   image: File | null;
 }
 
+export interface User {
+  id: number;
+  name: string;
+  email: string;
+  role: 'patient' | 'doctor';
+  doctorId?: string; // Links a user to a doctor profile if role is doctor
+}
+
+export interface Appointment {
+  id: number;
+  doctor_id: string;
+  patient_id: number;
+  patient_name: string;
+  date: string;
+  status: 'pending' | 'confirmed' | 'completed';
+  condition_summary: string;
+}
+
 export enum AppRoute {
   HOME = '/',
   ANALYZE = '/analyze',
   RESULTS = '/results',
   ABOUT = '/about',
-  NOT_FOUND = '/404'
+  NOT_FOUND = '/404',
+  LOGIN = '/login',
+  REGISTER = '/register',
+  DOCTOR_DASHBOARD = '/doctor-dashboard'
 }
