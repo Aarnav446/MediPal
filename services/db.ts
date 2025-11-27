@@ -60,6 +60,17 @@ export const getAllDoctors = (): Doctor[] => {
     }));
 };
 
+export const getDoctorProfile = (doctorId: string): Doctor | null => {
+    const res = alasql('SELECT * FROM doctors WHERE id = ?', [doctorId]);
+    if (res.length > 0) {
+        return {
+            ...res[0],
+            specialties: JSON.parse(res[0].specialties || '[]')
+        };
+    }
+    return null;
+};
+
 export const createDoctorProfile = (doc: Partial<Doctor>) => {
     // Generate simple defaults for fields not provided in onboarding
     const newDoc = {
@@ -81,6 +92,16 @@ export const createDoctorProfile = (doc: Partial<Doctor>) => {
         [newDoc.id, newDoc.name, newDoc.specialization, newDoc.experience, newDoc.rating, newDoc.distance, newDoc.imageUrl, newDoc.available, newDoc.bio, newDoc.specialties, newDoc.verified, newDoc.compatibility_score]);
         
     return newDoc.id;
+};
+
+export const updateDoctorProfile = (doctorId: string, updates: Partial<Doctor>) => {
+    if (updates.bio !== undefined) {
+        alasql('UPDATE doctors SET bio = ? WHERE id = ?', [updates.bio, doctorId]);
+    }
+    if (updates.verified !== undefined) {
+        alasql('UPDATE doctors SET verified = ? WHERE id = ?', [updates.verified, doctorId]);
+    }
+    // Add other fields as needed
 };
 
 export const registerUser = (name: string, email: string, password: string, role: 'patient' | 'doctor', verified: boolean = false, doctorId?: string) => {
