@@ -11,6 +11,7 @@ import NotFound from './pages/NotFound';
 import AuthPage from './pages/Auth';
 import DoctorDashboard from './pages/DoctorDashboard';
 import PatientDashboard from './pages/PatientDashboard';
+import AdminDashboard from './pages/AdminDashboard';
 import DoctorOnboarding from './pages/DoctorOnboarding';
 import Checkout from './pages/Checkout';
 import { AnalysisResult } from './types';
@@ -21,65 +22,37 @@ const AppContent: React.FC = () => {
   const { user } = useAuth();
 
   useEffect(() => {
-    const handleHashChange = () => {
-      setRoute(window.location.hash || '#/');
-    };
-
+    const handleHashChange = () => setRoute(window.location.hash || '#/');
     window.addEventListener('hashchange', handleHashChange);
     return () => window.removeEventListener('hashchange', handleHashChange);
   }, []);
 
-  const navigate = (path: string) => {
-    window.location.hash = `#${path}`;
-  };
+  const navigate = (path: string) => { window.location.hash = `#${path}`; };
 
   const renderContent = () => {
     const path = route.replace('#', '');
 
-    // Doctor Route Guard
-    if (path === '/doctor-dashboard') {
-        if (!user) return <AuthPage navigate={navigate} />;
-        if (user.role !== 'doctor') return <NotFound />; 
-        return <DoctorDashboard />;
-    }
-
-    // Patient Dashboard Route Guard
-    if (path === '/patient-dashboard') {
-        if (!user) return <AuthPage navigate={navigate} />;
-        if (user.role !== 'patient') return <NotFound />; 
-        return <PatientDashboard />;
-    }
+    if (path === '/doctor-dashboard') return user?.role === 'doctor' ? <DoctorDashboard /> : <AuthPage navigate={navigate} />;
+    if (path === '/patient-dashboard') return user?.role === 'patient' ? <PatientDashboard /> : <AuthPage navigate={navigate} />;
+    if (path === '/admin-dashboard') return <AdminDashboard />; // Open for demo
 
     if (path === '/' || path === '') {
-      if (user && user.role === 'doctor') return <DoctorDashboard />; 
-      if (user && user.role === 'patient') return <PatientDashboard />; 
+      if (user?.role === 'doctor') return <DoctorDashboard />;
+      if (user?.role === 'patient') return <PatientDashboard />;
       return <Landing />;
-    } else if (path === '/analyze') {
-      return <SymptomInput setAnalysisResult={setAnalysisResult} navigate={navigate} />;
-    } else if (path === '/results') {
-      return <Results result={analysisResult} navigate={navigate} />;
-    } else if (path === '/about') {
-      return <About />;
-    } else if (path === '/join-doctor') {
-      return <DoctorOnboarding navigate={navigate} />;
-    } else if (path === '/checkout') {
-      return <Checkout navigate={navigate} />;
-    } else if (path === '/login' || path === '/register') {
-      if (user) {
-         if (user.role === 'doctor') return <DoctorDashboard />;
-         return <PatientDashboard />; 
-      }
-      return <AuthPage navigate={navigate} />;
-    } else {
-      return <NotFound />;
     }
+    
+    if (path === '/analyze') return <SymptomInput setAnalysisResult={setAnalysisResult} navigate={navigate} />;
+    if (path === '/results') return <Results result={analysisResult} navigate={navigate} />;
+    if (path === '/about') return <About />;
+    if (path === '/join-doctor') return <DoctorOnboarding navigate={navigate} />;
+    if (path === '/checkout') return <Checkout navigate={navigate} />;
+    if (path === '/login' || path === '/register') return <AuthPage navigate={navigate} />;
+
+    return <NotFound />;
   };
 
-  return (
-    <Layout>
-      {renderContent()}
-    </Layout>
-  );
+  return <Layout>{renderContent()}</Layout>;
 };
 
 const App: React.FC = () => {

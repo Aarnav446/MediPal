@@ -34,7 +34,7 @@ export interface User {
   id: number;
   name: string;
   email: string;
-  role: 'patient' | 'doctor';
+  role: 'patient' | 'doctor' | 'admin';
   doctorId?: string; // Links a user to a doctor profile if role is doctor
   verified?: boolean;
 }
@@ -64,6 +64,29 @@ export interface CartItem {
   condition: string;
 }
 
+export interface VerificationRequest {
+  id: number;
+  doctor_id: string;
+  doctor_name: string;
+  status: 'pending' | 'approved' | 'rejected';
+  date_requested: string;
+  documents: {
+    license: string;
+    degree: string;
+    certs: string;
+  };
+}
+
+export interface CompetencyResult {
+  id: number;
+  doctor_id: string;
+  specialty: string;
+  score: number;
+  level: 'standard' | 'advanced';
+  status: 'pass' | 'fail';
+  date_taken: string;
+}
+
 export enum AppRoute {
   HOME = '/',
   ANALYZE = '/analyze',
@@ -74,6 +97,7 @@ export enum AppRoute {
   REGISTER = '/register',
   DOCTOR_DASHBOARD = '/doctor-dashboard',
   PATIENT_DASHBOARD = '/patient-dashboard',
+  ADMIN_DASHBOARD = '/admin-dashboard',
   DOCTOR_ONBOARDING = '/join-doctor',
   CHECKOUT = '/checkout'
 }
