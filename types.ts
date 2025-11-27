@@ -11,6 +11,7 @@ export interface Doctor {
   bio: string;
   specialties: string[];
   compatibility_score?: number; // Calculated score based on symptom match
+  verified: boolean; // Verification status based on uploaded documents
 }
 
 export interface AnalysisResult {
@@ -35,6 +36,7 @@ export interface User {
   email: string;
   role: 'patient' | 'doctor';
   doctorId?: string; // Links a user to a doctor profile if role is doctor
+  verified?: boolean;
 }
 
 export interface Appointment {
@@ -52,6 +54,16 @@ export interface Appointment {
   condition_summary: string;
 }
 
+export interface CartItem {
+  id: string; // unique cart item id
+  doctor: Doctor;
+  date: string;
+  time: string;
+  type: 'online' | 'in-person';
+  fee: number;
+  condition: string;
+}
+
 export enum AppRoute {
   HOME = '/',
   ANALYZE = '/analyze',
@@ -61,5 +73,7 @@ export enum AppRoute {
   LOGIN = '/login',
   REGISTER = '/register',
   DOCTOR_DASHBOARD = '/doctor-dashboard',
-  PATIENT_DASHBOARD = '/patient-dashboard'
+  PATIENT_DASHBOARD = '/patient-dashboard',
+  DOCTOR_ONBOARDING = '/join-doctor',
+  CHECKOUT = '/checkout'
 }

@@ -1,3 +1,4 @@
+
 import { Doctor } from './types';
 
 export const MOCK_DOCTORS: Doctor[] = [
@@ -12,7 +13,8 @@ export const MOCK_DOCTORS: Doctor[] = [
     imageUrl: 'https://picsum.photos/100/100?random=1',
     available: true,
     bio: 'Expert in treating complex skin conditions, acne scarring, and cosmetic dermatology with a patient-first approach.',
-    specialties: ['Acne', 'Eczema', 'Cosmetic Procedures']
+    specialties: ['Acne', 'Eczema', 'Cosmetic Procedures'],
+    verified: true
   },
   {
     id: '2',
@@ -24,7 +26,8 @@ export const MOCK_DOCTORS: Doctor[] = [
     imageUrl: 'https://picsum.photos/100/100?random=2',
     available: true,
     bio: 'Focused on pediatric dermatology and allergic skin reactions. passionate about early detection of skin issues.',
-    specialties: ['Pediatric Dermatology', 'Allergies', 'Psoriasis']
+    specialties: ['Pediatric Dermatology', 'Allergies', 'Psoriasis'],
+    verified: true
   },
   
   // Cardiologists
@@ -38,7 +41,8 @@ export const MOCK_DOCTORS: Doctor[] = [
     imageUrl: 'https://picsum.photos/100/100?random=3',
     available: false,
     bio: 'Renowned cardiologist specializing in preventative care and managing chronic heart conditions.',
-    specialties: ['Hypertension', 'Preventative Care', 'Heart Failure']
+    specialties: ['Hypertension', 'Preventative Care', 'Heart Failure'],
+    verified: true
   },
   {
     id: '10',
@@ -50,7 +54,8 @@ export const MOCK_DOCTORS: Doctor[] = [
     imageUrl: 'https://picsum.photos/100/100?random=10',
     available: true,
     bio: 'Senior consultant with extensive experience in interventional cardiology and angiography.',
-    specialties: ['Interventional Cardiology', 'Angioplasty', 'Arrhythmia']
+    specialties: ['Interventional Cardiology', 'Angioplasty', 'Arrhythmia'],
+    verified: true
   },
 
   // General Practitioners
@@ -64,7 +69,8 @@ export const MOCK_DOCTORS: Doctor[] = [
     imageUrl: 'https://picsum.photos/100/100?random=4',
     available: true,
     bio: 'Dedicated family physician providing comprehensive primary care for patients of all ages.',
-    specialties: ['Family Medicine', 'Flu & Cold', 'Vaccinations']
+    specialties: ['Family Medicine', 'Flu & Cold', 'Vaccinations'],
+    verified: true
   },
   {
     id: '9',
@@ -76,7 +82,8 @@ export const MOCK_DOCTORS: Doctor[] = [
     imageUrl: 'https://picsum.photos/100/100?random=9',
     available: true,
     bio: 'Holistic approach to general health with a focus on nutrition and lifestyle management.',
-    specialties: ['Nutrition', 'Lifestyle Medicine', 'Women\'s Health']
+    specialties: ['Nutrition', 'Lifestyle Medicine', 'Women\'s Health'],
+    verified: false
   },
   
   // Orthopedists
@@ -90,7 +97,8 @@ export const MOCK_DOCTORS: Doctor[] = [
     imageUrl: 'https://picsum.photos/100/100?random=5',
     available: true,
     bio: 'Specialist in sports injuries and minimally invasive joint replacement surgeries.',
-    specialties: ['Sports Injuries', 'Joint Replacement', 'Arthroscopy']
+    specialties: ['Sports Injuries', 'Joint Replacement', 'Arthroscopy'],
+    verified: true
   },
   {
     id: '15',
@@ -102,7 +110,8 @@ export const MOCK_DOCTORS: Doctor[] = [
     imageUrl: 'https://picsum.photos/100/100?random=15',
     available: true,
     bio: 'Expert in spinal disorders and rehabilitation therapies for chronic back pain.',
-    specialties: ['Spine Health', 'Rehabilitation', 'Trauma']
+    specialties: ['Spine Health', 'Rehabilitation', 'Trauma'],
+    verified: true
   },
   
   // Neurologists
@@ -116,7 +125,8 @@ export const MOCK_DOCTORS: Doctor[] = [
     imageUrl: 'https://picsum.photos/100/100?random=6',
     available: true,
     bio: 'Leading neurologist treating migraines, epilepsy, and neurodegenerative disorders.',
-    specialties: ['Migraines', 'Epilepsy', 'Stroke Recovery']
+    specialties: ['Migraines', 'Epilepsy', 'Stroke Recovery'],
+    verified: true
   },
   
   // Pediatricians
@@ -130,7 +140,8 @@ export const MOCK_DOCTORS: Doctor[] = [
     imageUrl: 'https://picsum.photos/100/100?random=7',
     available: true,
     bio: 'Compassionate care for infants, children, and adolescents. Expert in developmental milestones.',
-    specialties: ['Newborn Care', 'Adolescent Health', 'Immunizations']
+    specialties: ['Newborn Care', 'Adolescent Health', 'Immunizations'],
+    verified: true
   },
   
   // Ophthalmologists
@@ -144,7 +155,8 @@ export const MOCK_DOCTORS: Doctor[] = [
     imageUrl: 'https://picsum.photos/100/100?random=8',
     available: true,
     bio: 'Specializing in cataract surgery, glaucoma treatment, and corrective laser eye surgery.',
-    specialties: ['Cataract Surgery', 'Glaucoma', 'LASIK']
+    specialties: ['Cataract Surgery', 'Glaucoma', 'LASIK'],
+    verified: false
   },
 
   // Dentists
@@ -158,7 +170,8 @@ export const MOCK_DOCTORS: Doctor[] = [
     imageUrl: 'https://picsum.photos/100/100?random=11',
     available: true,
     bio: 'Gentle dentistry focusing on cosmetic smiles, veneers, and pain-free root canals.',
-    specialties: ['Cosmetic Dentistry', 'Root Canals', 'Teeth Whitening']
+    specialties: ['Cosmetic Dentistry', 'Root Canals', 'Teeth Whitening'],
+    verified: true
   },
   {
     id: '12',
@@ -170,7 +183,8 @@ export const MOCK_DOCTORS: Doctor[] = [
     imageUrl: 'https://picsum.photos/100/100?random=12',
     available: true,
     bio: 'Experienced in oral surgery, implants, and complete family dental care.',
-    specialties: ['Oral Surgery', 'Implants', 'Orthodontics']
+    specialties: ['Oral Surgery', 'Implants', 'Orthodontics'],
+    verified: true
   },
 
   // Psychiatrists
@@ -184,7 +198,8 @@ export const MOCK_DOCTORS: Doctor[] = [
     imageUrl: 'https://picsum.photos/100/100?random=13',
     available: true,
     bio: 'Holistic mental health care treating anxiety, depression, and stress-related disorders.',
-    specialties: ['Anxiety', 'Depression', 'CBT']
+    specialties: ['Anxiety', 'Depression', 'CBT'],
+    verified: true
   },
 
   // ENT
@@ -198,7 +213,8 @@ export const MOCK_DOCTORS: Doctor[] = [
     imageUrl: 'https://picsum.photos/100/100?random=14',
     available: true,
     bio: 'Expert in sinus disorders, sleep apnea solutions, and pediatric ear infections.',
-    specialties: ['Sinusitis', 'Sleep Apnea', 'Hearing Loss']
+    specialties: ['Sinusitis', 'Sleep Apnea', 'Hearing Loss'],
+    verified: true
   },
 ];
 

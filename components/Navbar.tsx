@@ -1,8 +1,11 @@
+
 import React from 'react';
 import { useAuth } from '../context/AuthContext';
+import { useCart } from '../context/CartContext';
 
 const Navbar: React.FC = () => {
   const { user, logout } = useAuth();
+  const { cart } = useCart();
 
   return (
     <nav className="sticky top-0 z-50 bg-white/90 backdrop-blur-lg border-b border-slate-200 transition-all duration-300">
@@ -27,20 +30,38 @@ const Navbar: React.FC = () => {
             <a href="#/" className="px-4 py-2 text-sm font-medium text-slate-600 rounded-lg hover:bg-slate-50 hover:text-medical-600 transition-all">Home</a>
             <a href="#/about" className="px-4 py-2 text-sm font-medium text-slate-600 rounded-lg hover:bg-slate-50 hover:text-medical-600 transition-all">About</a>
             
-            {/* Show 'Check Symptoms' prominently if patient or not logged in */}
             {(!user || user.role === 'patient') && (
                 <a href="#/analyze" className="px-4 py-2 text-sm font-medium text-slate-600 rounded-lg hover:bg-slate-50 hover:text-medical-600 transition-all">
                     Symptom Checker
                 </a>
+            )}
+            
+            {!user && (
+              <a href="#/join-doctor" className="px-4 py-2 text-sm font-medium text-slate-600 rounded-lg hover:bg-slate-50 hover:text-medical-600 transition-all">
+                  For Doctors
+              </a>
             )}
           </div>
 
           {/* Right Action Section */}
           <div className="flex items-center gap-4">
             
+            {/* Cart Icon */}
+            {(!user || user.role === 'patient') && (
+              <a href="#/checkout" className="relative p-2 text-slate-500 hover:text-medical-600 transition-colors">
+                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z" />
+                </svg>
+                {cart.length > 0 && (
+                  <span className="absolute top-0 right-0 inline-flex items-center justify-center px-2 py-1 text-xs font-bold leading-none text-white transform translate-x-1/4 -translate-y-1/4 bg-red-500 rounded-full">
+                    {cart.length}
+                  </span>
+                )}
+              </a>
+            )}
+
             {user ? (
                 <div className="flex items-center gap-4">
-                    {/* Role Based Dashboard Link */}
                     {user.role === 'doctor' ? (
                         <a href="#/doctor-dashboard" className="hidden md:flex items-center gap-2 px-4 py-2 bg-indigo-50 text-indigo-700 rounded-lg text-sm font-semibold hover:bg-indigo-100 transition-colors border border-indigo-100">
                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" /></svg>

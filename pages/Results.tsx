@@ -1,8 +1,7 @@
-
 import React, { useState } from 'react';
 import { AnalysisResult, Doctor } from '../types';
 import { useAuth } from '../context/AuthContext';
-import { createAppointment } from '../services/db';
+import { useCart } from '../context/CartContext';
 
 interface ResultsProps {
   result: AnalysisResult | null;
@@ -11,6 +10,7 @@ interface ResultsProps {
 
 const Results: React.FC<ResultsProps> = ({ result, navigate }) => {
   const { user } = useAuth();
+  const { addToCart } = useCart();
   
   // Filters State
   const [minRating, setMinRating] = useState<number>(0);
@@ -19,15 +19,11 @@ const Results: React.FC<ResultsProps> = ({ result, navigate }) => {
   // Modal State
   const [selectedDoctor, setSelectedDoctor] = useState<Doctor | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
-  const [bookingStep, setBookingStep] = useState<1 | 2 | 3> (1); // 1: Details, 2: Payment, 3: Success
-  const [bookingStatus, setBookingStatus] = useState<'idle' | 'processing' | 'confirmed' | 'error'>('idle');
 
   // Booking Form State
   const [date, setDate] = useState('');
   const [time, setTime] = useState('');
   const [apptType, setApptType] = useState<'in-person' | 'online'>('in-person');
-  const [paymentChoice, setPaymentChoice] = useState<'now' | 'later'>('later');
-  const [paymentMethod, setPaymentMethod] = useState<'paytm' | 'card' | 'netbanking'>('paytm');
 
   if (!result) {
     React.useEffect(() => {
@@ -43,21 +39,12 @@ const Results: React.FC<ResultsProps> = ({ result, navigate }) => {
   }[result.urgency];
 
   const handleBookClick = (doctor: Doctor) => {
-    if (!user) {
-        if(confirm("You must be logged in to book an appointment. Go to Login?")) {
-            navigate('/login');
-        }
-        return;
-    }
     setSelectedDoctor(doctor);
-    
     // Set default date to tomorrow
     const tmrw = new Date();
     tmrw.setDate(tmrw.getDate() + 1);
     setDate(tmrw.toISOString().split('T')[0]);
     setTime('10:00');
-    setBookingStep(1);
-    setBookingStatus('idle');
     setIsModalOpen(true);
   };
 
@@ -66,36 +53,26 @@ const Results: React.FC<ResultsProps> = ({ result, navigate }) => {
       return apptType === 'in-person' ? 50 : 35;
   };
 
-  const confirmBooking = async () => {
-    if (!selectedDoctor || !user) return;
-    
-    setBookingStatus('processing');
-    try {
-        // Simulate network/payment gateway
-        await new Promise(r => setTimeout(r, 1500));
-        
-        // Final Payment Method logic
-        const finalMethod = paymentChoice === 'later' ? 'pay_later' : paymentMethod;
+  const handleAddToCart = () => {
+      if (!selectedDoctor) return;
+      if (!date || !time) {
+          alert("Please select date and time.");
+          return;
+      }
+      
+      const cartItem = {
+          id: Date.now().toString(),
+          doctor: selectedDoctor,
+          date,
+          time,
+          type: apptType,
+          fee: calculateFee(),
+          condition: result.potential_conditions.join(', ') || result.explanation.substring(0, 30) + '...'
+      };
 
-        // Write to persistent DB
-        createAppointment(
-            selectedDoctor.id, 
-            user.id, 
-            user.name, 
-            result.potential_conditions.join(', ') || result.explanation.substring(0, 50) + "...",
-            date,
-            time,
-            apptType,
-            finalMethod,
-            calculateFee()
-        );
-
-        setBookingStatus('confirmed');
-        setBookingStep(3);
-    } catch (e) {
-        console.error(e);
-        setBookingStatus('error');
-    }
+      addToCart(cartItem);
+      setIsModalOpen(false);
+      navigate('/checkout'); // Redirect to checkout immediately or stay? Let's go to checkout for better flow
   };
 
   const closeModal = () => {
@@ -249,7 +226,14 @@ const Results: React.FC<ResultsProps> = ({ result, navigate }) => {
                       className="w-16 h-16 rounded-full object-cover border-2 border-slate-50 mr-4 shadow-sm"
                     />
                     <div>
-                      <h3 className="text-lg font-bold text-slate-900">{doctor.name}</h3>
+                      <h3 className="text-lg font-bold text-slate-900 flex items-center gap-2">
+                          {doctor.name}
+                          {doctor.verified && (
+                              <span title="Verified Specialist" className="text-blue-500">
+                                  <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" /></svg>
+                              </span>
+                          )}
+                      </h3>
                       <p className="text-medical-600 font-medium text-sm">{doctor.specialization}</p>
                     </div>
                   </div>
@@ -318,7 +302,7 @@ const Results: React.FC<ResultsProps> = ({ result, navigate }) => {
         )}
       </div>
 
-      {/* Updated Booking Wizard Modal */}
+      {/* Simplified Booking Modal - Just details to Add to Cart */}
       {isModalOpen && selectedDoctor && (
         <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
             <div className="absolute inset-0 bg-slate-900/50 backdrop-blur-sm transition-opacity" onClick={closeModal}></div>
@@ -326,174 +310,75 @@ const Results: React.FC<ResultsProps> = ({ result, navigate }) => {
                 
                 {/* Header */}
                 <div className="bg-medical-600 p-6 text-white flex-shrink-0">
-                    <h3 className="text-xl font-bold">
-                        {bookingStep === 1 ? 'Appointment Details' : bookingStep === 2 ? 'Payment' : 'Confirmation'}
-                    </h3>
+                    <h3 className="text-xl font-bold">Appointment Details</h3>
                     <p className="text-medical-100 text-sm mt-1">Book with {selectedDoctor.name}</p>
                 </div>
 
                 {/* Body */}
                 <div className="p-6 overflow-y-auto flex-grow">
-                    
-                    {/* STEP 1: Details */}
-                    {bookingStep === 1 && (
-                        <div className="space-y-6">
-                            {/* Consultation Type */}
-                            <div>
-                                <label className="block text-sm font-medium text-slate-700 mb-2">Consultation Type</label>
-                                <div className="grid grid-cols-2 gap-4">
-                                    <button 
-                                        onClick={() => setApptType('in-person')}
-                                        className={`p-4 rounded-xl border-2 flex flex-col items-center transition-all ${apptType === 'in-person' ? 'border-medical-500 bg-medical-50 text-medical-700' : 'border-slate-200 hover:border-slate-300'}`}
-                                    >
-                                        <svg className="w-6 h-6 mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" /></svg>
-                                        <span className="font-semibold text-sm">In-Clinic</span>
-                                        <span className="text-xs mt-1">$50.00</span>
-                                    </button>
-                                    <button 
-                                        onClick={() => setApptType('online')}
-                                        className={`p-4 rounded-xl border-2 flex flex-col items-center transition-all ${apptType === 'online' ? 'border-medical-500 bg-medical-50 text-medical-700' : 'border-slate-200 hover:border-slate-300'}`}
-                                    >
-                                        <svg className="w-6 h-6 mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 10l4.553-2.276A1 1 0 0121 8.818v6.364a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" /></svg>
-                                        <span className="font-semibold text-sm">Video Call</span>
-                                        <span className="text-xs mt-1">$35.00</span>
-                                    </button>
-                                </div>
-                            </div>
-
-                            {/* Date & Time */}
+                    <div className="space-y-6">
+                        {/* Consultation Type */}
+                        <div>
+                            <label className="block text-sm font-medium text-slate-700 mb-2">Consultation Type</label>
                             <div className="grid grid-cols-2 gap-4">
-                                <div>
-                                    <label className="block text-sm font-medium text-slate-700 mb-1">Date</label>
-                                    <input 
-                                        type="date" 
-                                        value={date}
-                                        min={new Date().toISOString().split('T')[0]}
-                                        onChange={(e) => setDate(e.target.value)}
-                                        className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-medical-500 outline-none"
-                                    />
-                                </div>
-                                <div>
-                                    <label className="block text-sm font-medium text-slate-700 mb-1">Time</label>
-                                    <input 
-                                        type="time" 
-                                        value={time}
-                                        onChange={(e) => setTime(e.target.value)}
-                                        className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-medical-500 outline-none"
-                                    />
-                                </div>
+                                <button 
+                                    onClick={() => setApptType('in-person')}
+                                    className={`p-4 rounded-xl border-2 flex flex-col items-center transition-all ${apptType === 'in-person' ? 'border-medical-500 bg-medical-50 text-medical-700' : 'border-slate-200 hover:border-slate-300'}`}
+                                >
+                                    <svg className="w-6 h-6 mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" /></svg>
+                                    <span className="font-semibold text-sm">In-Clinic</span>
+                                    <span className="text-xs mt-1">$50.00</span>
+                                </button>
+                                <button 
+                                    onClick={() => setApptType('online')}
+                                    className={`p-4 rounded-xl border-2 flex flex-col items-center transition-all ${apptType === 'online' ? 'border-medical-500 bg-medical-50 text-medical-700' : 'border-slate-200 hover:border-slate-300'}`}
+                                >
+                                    <svg className="w-6 h-6 mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 10l4.553-2.276A1 1 0 0121 8.818v6.364a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" /></svg>
+                                    <span className="font-semibold text-sm">Video Call</span>
+                                    <span className="text-xs mt-1">$35.00</span>
+                                </button>
                             </div>
                         </div>
-                    )}
 
-                    {/* STEP 2: Payment */}
-                    {bookingStep === 2 && (
-                        <div className="space-y-6">
-                            <div className="bg-slate-50 p-4 rounded-lg border border-slate-200 flex justify-between items-center">
-                                <span className="text-slate-600 font-medium">Total to Pay:</span>
-                                <span className="text-xl font-bold text-slate-900">${calculateFee()}.00</span>
+                        {/* Date & Time */}
+                        <div className="grid grid-cols-2 gap-4">
+                            <div>
+                                <label className="block text-sm font-medium text-slate-700 mb-1">Date</label>
+                                <input 
+                                    type="date" 
+                                    value={date}
+                                    min={new Date().toISOString().split('T')[0]}
+                                    onChange={(e) => setDate(e.target.value)}
+                                    className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-medical-500 outline-none"
+                                />
                             </div>
-
-                            {/* Payment Choice */}
-                            <div className="space-y-3">
-                                <label className="flex items-center p-4 border rounded-xl cursor-pointer hover:bg-slate-50 transition-colors">
-                                    <input 
-                                        type="radio" 
-                                        name="paymentChoice" 
-                                        checked={paymentChoice === 'later'}
-                                        onChange={() => setPaymentChoice('later')}
-                                        className="w-4 h-4 text-medical-600 focus:ring-medical-500"
-                                    />
-                                    <div className="ml-3">
-                                        <span className="block text-sm font-medium text-slate-900">Pay at Clinic</span>
-                                        <span className="block text-xs text-slate-500">Pay via Cash/Card after consultation</span>
-                                    </div>
-                                </label>
-
-                                <label className="flex items-start p-4 border rounded-xl cursor-pointer hover:bg-slate-50 transition-colors">
-                                    <input 
-                                        type="radio" 
-                                        name="paymentChoice" 
-                                        checked={paymentChoice === 'now'}
-                                        onChange={() => setPaymentChoice('now')}
-                                        className="mt-1 w-4 h-4 text-medical-600 focus:ring-medical-500"
-                                    />
-                                    <div className="ml-3 w-full">
-                                        <span className="block text-sm font-medium text-slate-900">Pay Now</span>
-                                        <span className="block text-xs text-slate-500">Secure online payment</span>
-                                        
-                                        {/* Expanded Payment Options if Pay Now selected */}
-                                        {paymentChoice === 'now' && (
-                                            <div className="mt-4 space-y-2 animate-fade-in border-t border-slate-200 pt-3">
-                                                <div className={`p-3 rounded-lg border flex items-center gap-3 cursor-pointer ${paymentMethod === 'paytm' ? 'bg-blue-50 border-blue-200' : 'hover:bg-gray-50'}`} onClick={() => setPaymentMethod('paytm')}>
-                                                    <div className="w-5 h-5 rounded-full border flex items-center justify-center">
-                                                        {paymentMethod === 'paytm' && <div className="w-3 h-3 bg-blue-600 rounded-full"></div>}
-                                                    </div>
-                                                    <span className="text-sm font-semibold">Paytm / UPI</span>
-                                                </div>
-                                                <div className={`p-3 rounded-lg border flex items-center gap-3 cursor-pointer ${paymentMethod === 'card' ? 'bg-blue-50 border-blue-200' : 'hover:bg-gray-50'}`} onClick={() => setPaymentMethod('card')}>
-                                                    <div className="w-5 h-5 rounded-full border flex items-center justify-center">
-                                                         {paymentMethod === 'card' && <div className="w-3 h-3 bg-blue-600 rounded-full"></div>}
-                                                    </div>
-                                                    <span className="text-sm font-semibold">Credit / Debit Card</span>
-                                                </div>
-                                            </div>
-                                        )}
-                                    </div>
-                                </label>
+                            <div>
+                                <label className="block text-sm font-medium text-slate-700 mb-1">Time</label>
+                                <input 
+                                    type="time" 
+                                    value={time}
+                                    onChange={(e) => setTime(e.target.value)}
+                                    className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-medical-500 outline-none"
+                                />
                             </div>
                         </div>
-                    )}
-
-                    {/* STEP 3: Success */}
-                    {bookingStep === 3 && (
-                        <div className="text-center py-4">
-                            <div className="w-20 h-20 bg-green-100 text-green-600 rounded-full flex items-center justify-center mx-auto mb-6 animate-bounce">
-                                <svg className="w-10 h-10" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" /></svg>
-                            </div>
-                            <h3 className="text-2xl font-bold text-slate-900 mb-2">Booking Confirmed!</h3>
-                            <p className="text-slate-600 mb-6">
-                                Your <strong>{apptType}</strong> appointment with <strong>{selectedDoctor.name}</strong> is scheduled for <strong>{date} at {time}</strong>.
-                            </p>
+                        
+                        <div className="p-3 bg-slate-50 border border-slate-200 rounded-lg text-xs text-slate-500">
+                             <strong>Note:</strong> Free cancellation is available up to 24 hours before your appointment time.
                         </div>
-                    )}
+                    </div>
                 </div>
 
                 {/* Footer / Actions */}
                 <div className="p-6 border-t border-slate-100 bg-slate-50 flex gap-3">
-                    {bookingStep === 1 && (
-                        <>
-                            <button onClick={closeModal} className="flex-1 py-3 border border-slate-300 rounded-xl font-medium text-slate-600 hover:bg-white">Cancel</button>
-                            <button 
-                                onClick={() => {
-                                    if(!date || !time) return alert("Please select date and time");
-                                    setBookingStep(2);
-                                }} 
-                                className="flex-1 py-3 bg-medical-600 text-white rounded-xl font-bold hover:bg-medical-700"
-                            >
-                                Next: Payment
-                            </button>
-                        </>
-                    )}
-                    
-                    {bookingStep === 2 && (
-                         <>
-                            <button onClick={() => setBookingStep(1)} className="flex-1 py-3 border border-slate-300 rounded-xl font-medium text-slate-600 hover:bg-white">Back</button>
-                            <button 
-                                onClick={confirmBooking}
-                                disabled={bookingStatus === 'processing'}
-                                className="flex-1 py-3 bg-medical-600 text-white rounded-xl font-bold hover:bg-medical-700 flex justify-center items-center disabled:opacity-70"
-                            >
-                                {bookingStatus === 'processing' ? 'Processing...' : (paymentChoice === 'now' ? `Pay $${calculateFee()}` : 'Confirm Booking')}
-                            </button>
-                         </>
-                    )}
-
-                    {bookingStep === 3 && (
-                        <button onClick={closeModal} className="w-full py-3 bg-slate-800 text-white rounded-xl font-bold hover:bg-slate-900">
-                            Close & View Dashboard
-                        </button>
-                    )}
+                    <button onClick={closeModal} className="flex-1 py-3 border border-slate-300 rounded-xl font-medium text-slate-600 hover:bg-white">Cancel</button>
+                    <button 
+                        onClick={handleAddToCart} 
+                        className="flex-1 py-3 bg-medical-600 text-white rounded-xl font-bold hover:bg-medical-700 shadow-lg flex justify-center items-center gap-2"
+                    >
+                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z" /></svg>
+                        Add to Cart
+                    </button>
                 </div>
             </div>
         </div>
