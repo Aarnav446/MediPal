@@ -1,3 +1,4 @@
+
 export interface Doctor {
   id: string;
   name: string;
@@ -54,5 +55,6 @@ export enum AppRoute {
   NOT_FOUND = '/404',
   LOGIN = '/login',
   REGISTER = '/register',
-  DOCTOR_DASHBOARD = '/doctor-dashboard'
+  DOCTOR_DASHBOARD = '/doctor-dashboard',
+  PATIENT_DASHBOARD = '/patient-dashboard'
 }

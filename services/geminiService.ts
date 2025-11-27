@@ -43,8 +43,8 @@ export const analyzeSymptomsWithGemini = async (
     3. Determine the urgency level (Low, Medium, or High).
     4. Provide a detailed, empathetic, and personalized explanation.
     5. List 1-3 potential medical conditions (diseases or issues) that match these symptoms (e.g., "Psoriasis", "Migraine", "Hypertension"). BE VERY SPECIFIC with disease names.
-    6. Recommend the generally accepted "Best/Fastest" treatment modality (e.g., "Allopathy", "Ayurveda", "Homeopathy", "Physiotherapy") for this specific condition based on standard medical efficacy data.
-    7. Provide a short reasoning for why this treatment modality is recommended (e.g., "Allopathy is recommended for faster symptom relief in acute cases...").
+    6. Determine the "Best Proper Curable Type". Which medical system (Allopathy, Ayurveda, Homeopathy, Surgery, Physiotherapy) provides the most definitive and fastest CURE for this specific condition based on medical consensus?
+    7. Provide a reasoning for this treatment choice, focusing on "how to cure it best and faster".
 
     The 'specialist' field MUST be one of the following strings exactly:
     ${JSON.stringify(VALID_SPECIALIZATIONS)}
