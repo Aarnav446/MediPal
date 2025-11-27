@@ -68,13 +68,10 @@ export interface VerificationRequest {
   id: number;
   doctor_id: string;
   doctor_name: string;
+  license_file: string; // Mock filename
+  degree_file: string; // Mock filename
   status: 'pending' | 'approved' | 'rejected';
-  date_requested: string;
-  documents: {
-    license: string;
-    degree: string;
-    certs: string;
-  };
+  submitted_at: string;
 }
 
 export interface CompetencyResult {
@@ -83,8 +80,8 @@ export interface CompetencyResult {
   specialty: string;
   score: number;
   level: 'standard' | 'advanced';
-  status: 'pass' | 'fail';
-  date_taken: string;
+  passed: boolean;
+  timestamp: string;
 }
 
 export enum AppRoute {

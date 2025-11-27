@@ -10,50 +10,67 @@ export const initDB = () => {
   alasql('ATTACH LOCALSTORAGE DATABASE medimatch_db');
   alasql('USE medimatch_db');
 
-  // Initialize Tables
+  // Initialize Tables if they don't exist
   alasql('CREATE TABLE IF NOT EXISTS users (id INT IDENTITY, name STRING, email STRING, password STRING, role STRING, doctorId STRING, verified BOOLEAN)');
-  alasql('CREATE TABLE IF NOT EXISTS doctors (id STRING, name STRING, specialization STRING, experience STRING, rating NUMBER, distance STRING, imageUrl STRING, available BOOLEAN, bio STRING, specialties STRING, verified BOOLEAN, compatibility_score NUMBER)');
-  alasql('CREATE TABLE IF NOT EXISTS appointments (id INT IDENTITY, doctor_id STRING, patient_id INT, patient_name STRING, date STRING, time STRING, type STRING, payment_status STRING, payment_method STRING, amount MONEY, status STRING, condition_summary STRING)');
-  alasql('CREATE TABLE IF NOT EXISTS doctor_settings (doctor_id STRING, consultation_modes STRING, time_slots STRING)');
   
-  // NEW Tables for enhanced flow
-  alasql('CREATE TABLE IF NOT EXISTS verification_requests (id INT IDENTITY, doctor_id STRING, doctor_name STRING, status STRING, date_requested STRING, documents STRING)');
-  alasql('CREATE TABLE IF NOT EXISTS competency_results (id INT IDENTITY, doctor_id STRING, specialty STRING, score NUMBER, level STRING, status STRING, date_taken STRING)');
+  // Doctors Profile Table (For searching and matching)
+  alasql('CREATE TABLE IF NOT EXISTS doctors (id STRING, name STRING, specialization STRING, experience STRING, rating NUMBER, distance STRING, imageUrl STRING, available BOOLEAN, bio STRING, specialties STRING, verified BOOLEAN, compatibility_score NUMBER)');
 
-  // CLEANUP: Strict removal of test data
+  // Appointments Table
+  alasql('CREATE TABLE IF NOT EXISTS appointments (id INT IDENTITY, doctor_id STRING, patient_id INT, patient_name STRING, date STRING, time STRING, type STRING, payment_status STRING, payment_method STRING, amount MONEY, status STRING, condition_summary STRING)');
+
+  // Doctor Settings Table
+  alasql('CREATE TABLE IF NOT EXISTS doctor_settings (doctor_id STRING, consultation_modes STRING, time_slots STRING)');
+
+  // Verification Requests Table
+  alasql('CREATE TABLE IF NOT EXISTS verification_requests (id INT IDENTITY, doctor_id STRING, doctor_name STRING, license_file STRING, degree_file STRING, status STRING, submitted_at STRING, rejection_reason STRING)');
+
+  // Competency Results Table
+  alasql('CREATE TABLE IF NOT EXISTS competency_results (id INT IDENTITY, doctor_id STRING, specialty STRING, score NUMBER, level STRING, passed BOOLEAN, timestamp STRING)');
+
+  // CLEANUP: Remove dummy data requested by user (and any duplicate doctors)
   alasql('DELETE FROM doctors WHERE name LIKE "%John Doe%" OR name LIKE "%Aarnav%"');
   alasql('DELETE FROM users WHERE name LIKE "%John Doe%" OR name LIKE "%Aarnav%"');
-  alasql('DELETE FROM verification_requests WHERE doctor_name LIKE "%John Doe%"');
+  
+  // Clean up duplicate seed data if it exists (simple dedup strategy)
+  // (In a real app, we'd use constraints, but for Alasql localStorage, we check before insert below)
 
   // Seed Data only if users table is empty
   const userCount = alasql('SELECT VALUE COUNT(*) FROM users');
   if (userCount === 0) {
     console.log("Seeding Persistent Database...");
     
-    // Seed Doctors
+    // Seed Doctors into Users and Doctors tables
     MOCK_DOCTORS.forEach(doc => {
       const email = doc.name.toLowerCase().replace('dr. ', '').replace(' ', '.') + '@medimatch.com';
-      alasql('INSERT INTO users (name, email, password, role, doctorId, verified) VALUES (?, ?, ?, ?, ?, ?)', 
+      
+      // Add to Users
+      alasql('INSERT INTO users (name, email, password, role, doctorId, verified) VALUES (?, ?, ?, ?, ?, ?, ?)', 
         [doc.name, email, 'password', 'doctor', doc.id, doc.verified]);
+      
+      // Add to Doctors
       alasql('INSERT INTO doctors VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
         [doc.id, doc.name, doc.specialization, doc.experience, doc.rating, doc.distance, doc.imageUrl, doc.available, doc.bio, JSON.stringify(doc.specialties), doc.verified, 0]);
+
+      // Default Settings
       alasql('INSERT INTO doctor_settings (doctor_id, consultation_modes, time_slots) VALUES (?, ?, ?)',
         [doc.id, JSON.stringify({ online: true, clinic: true }), JSON.stringify(['09:00', '10:00', '11:00', '14:00', '15:00', '16:00'])]);
     });
 
-    // Seed Patient
+    // Seed a demo Patient
     alasql('INSERT INTO users (name, email, password, role) VALUES (?, ?, ?, ?)',
       ['Demo Patient', 'patient@demo.com', 'password', 'patient']);
-      
-    // Seed Admin
+
+    // Seed a demo Admin
     alasql('INSERT INTO users (name, email, password, role) VALUES (?, ?, ?, ?)',
-      ['System Admin', 'admin@medimatch.com', 'admin', 'admin']);
+      ['Admin User', 'admin@medimatch.com', 'password', 'admin']);
       
     console.log("Database Seeded.");
   }
 };
 
 // --- DOCTOR FUNCTIONS ---
+
 export const getAllDoctors = (): Doctor[] => {
     const docs = alasql('SELECT * FROM doctors');
     return docs.map((d: any) => ({
@@ -91,22 +108,41 @@ export const createDoctorProfile = (doc: Partial<Doctor>) => {
 
     alasql('INSERT INTO doctors VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
         [newDoc.id, newDoc.name, newDoc.specialization, newDoc.experience, newDoc.rating, newDoc.distance, newDoc.imageUrl, newDoc.available, newDoc.bio, newDoc.specialties, newDoc.verified, newDoc.compatibility_score]);
+    
+    // Initialize settings
+    alasql('INSERT INTO doctor_settings (doctor_id, consultation_modes, time_slots) VALUES (?, ?, ?)',
+        [newDoc.id, JSON.stringify({ online: true, clinic: true }), JSON.stringify(['09:00', '10:00', '14:00', '16:00'])]);
+
     return newDoc.id;
 };
 
 export const updateDoctorProfile = (doctorId: string, updates: Partial<Doctor>) => {
-    if (updates.bio !== undefined) alasql('UPDATE doctors SET bio = ? WHERE id = ?', [updates.bio, doctorId]);
-    if (updates.verified !== undefined) alasql('UPDATE doctors SET verified = ? WHERE id = ?', [updates.verified, doctorId]);
+    if (updates.bio !== undefined) {
+        alasql('UPDATE doctors SET bio = ? WHERE id = ?', [updates.bio, doctorId]);
+    }
+    if (updates.verified !== undefined) {
+        alasql('UPDATE doctors SET verified = ? WHERE id = ?', [updates.verified, doctorId]);
+    }
+    if (updates.specialties !== undefined) {
+        alasql('UPDATE doctors SET specialties = ? WHERE id = ?', [JSON.stringify(updates.specialties), doctorId]);
+    }
+    if (updates.specialization !== undefined) {
+        alasql('UPDATE doctors SET specialization = ? WHERE id = ?', [updates.specialization, doctorId]);
+    }
 };
 
 // --- AUTH FUNCTIONS ---
+
 export const registerUser = (name: string, email: string, password: string, role: 'patient' | 'doctor', verified: boolean = false, doctorId?: string) => {
   const exists = alasql('SELECT * FROM users WHERE email = ?', [email]);
-  if (exists.length > 0) throw new Error('Email already registered');
+  if (exists.length > 0) {
+    throw new Error('Email already registered');
+  }
   
   const id = alasql('SELECT MAX(id) + 1 as id FROM users')[0].id || 1;
   alasql('INSERT INTO users (id, name, email, password, role, doctorId, verified) VALUES (?, ?, ?, ?, ?, ?, ?)', 
     [id, name, email, password, role, doctorId, verified]);
+    
   return { id, name, email, role, doctorId, verified };
 };
 
@@ -120,7 +156,18 @@ export const loginUser = (email: string, password: string): User | null => {
 };
 
 // --- APPOINTMENT FUNCTIONS ---
-export const createAppointment = (doctorId: string, patientId: number, patientName: string, condition: string, date: string, time: string, type: 'online' | 'in-person', paymentMethod: string, amount: number) => {
+
+export const createAppointment = (
+  doctorId: string, 
+  patientId: number, 
+  patientName: string, 
+  condition: string,
+  date: string,
+  time: string,
+  type: 'online' | 'in-person',
+  paymentMethod: 'pay_later' | 'paytm' | 'card' | 'netbanking',
+  amount: number
+) => {
   const paymentStatus = paymentMethod === 'pay_later' ? 'pending' : 'paid';
   alasql('INSERT INTO appointments (doctor_id, patient_id, patient_name, date, time, type, payment_status, payment_method, amount, status, condition_summary) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
     [doctorId, patientId, patientName, date, time, type, paymentStatus, paymentMethod, amount, 'confirmed', condition]);
@@ -139,7 +186,8 @@ export const getPatientAppointments = (patientId: number): Appointment[] => {
 };
 
 // --- SETTINGS FUNCTIONS ---
-export const saveDoctorSettings = (doctorId: string, modes: any, timeSlots: string[]) => {
+
+export const saveDoctorSettings = (doctorId: string, modes: {online: boolean, clinic: boolean}, timeSlots: string[]) => {
   const existing = alasql('SELECT * FROM doctor_settings WHERE doctor_id = ?', [doctorId]);
   if (existing.length > 0) {
       alasql('UPDATE doctor_settings SET consultation_modes = ?, time_slots = ? WHERE doctor_id = ?',
@@ -163,40 +211,47 @@ export const getDoctorSettings = (doctorId: string) => {
 
 // --- VERIFICATION & COMPETENCY FUNCTIONS ---
 
-export const createVerificationRequest = (doctorId: string, doctorName: string, docNames: {license: string, degree: string, certs: string}) => {
+export const createVerificationRequest = (doctorId: string, doctorName: string, licenseName: string, degreeName: string) => {
     // Check if pending exists
     const existing = alasql('SELECT * FROM verification_requests WHERE doctor_id = ? AND status = "pending"', [doctorId]);
-    if (existing.length > 0) return; // Already pending
-
-    alasql('INSERT INTO verification_requests (doctor_id, doctor_name, status, date_requested, documents) VALUES (?, ?, ?, ?, ?)',
-        [doctorId, doctorName, 'pending', new Date().toISOString(), JSON.stringify(docNames)]);
-};
-
-export const getVerificationRequests = (): VerificationRequest[] => {
-    const reqs = alasql('SELECT * FROM verification_requests ORDER BY date_requested DESC');
-    return reqs.map((r: any) => ({
-        ...r,
-        documents: JSON.parse(r.documents || '{}')
-    }));
-};
-
-export const verifyDoctor = (requestId: number, doctorId: string, approved: boolean) => {
-    const status = approved ? 'approved' : 'rejected';
-    alasql('UPDATE verification_requests SET status = ? WHERE id = ?', [status, requestId]);
-    if (approved) {
-        alasql('UPDATE doctors SET verified = TRUE WHERE id = ?', [doctorId]);
-        alasql('UPDATE users SET verified = TRUE WHERE doctorId = ?', [doctorId]);
+    if (existing.length === 0) {
+        alasql('INSERT INTO verification_requests (doctor_id, doctor_name, license_file, degree_file, status, submitted_at, rejection_reason) VALUES (?, ?, ?, ?, ?, ?, ?)',
+            [doctorId, doctorName, licenseName, degreeName, 'pending', new Date().toISOString(), null]);
     }
 };
 
-export const saveCompetencyResult = (doctorId: string, specialty: string, score: number, level: string, status: string) => {
-    alasql('INSERT INTO competency_results (doctor_id, specialty, score, level, status, date_taken) VALUES (?, ?, ?, ?, ?, ?)',
-        [doctorId, specialty, score, level, status, new Date().toISOString()]);
+export const getVerificationRequests = (): VerificationRequest[] => {
+    return alasql('SELECT * FROM verification_requests WHERE status = "pending"');
+};
+
+export const getDoctorVerificationStatus = (doctorId: string): 'pending' | 'approved' | 'rejected' | 'none' => {
+    const req = alasql('SELECT * FROM verification_requests WHERE doctor_id = ? ORDER BY submitted_at DESC LIMIT 1', [doctorId]);
+    if (req.length > 0) return req[0].status;
+    return 'none';
+};
+
+export const verifyDoctor = (requestId: number, doctorId: string, approve: boolean, reason?: string) => {
+    const status = approve ? 'approved' : 'rejected';
+    alasql('UPDATE verification_requests SET status = ?, rejection_reason = ? WHERE id = ?', [status, reason || null, requestId]);
+    
+    if (approve) {
+        alasql('UPDATE doctors SET verified = TRUE WHERE id = ?', [doctorId]);
+    }
+};
+
+export const saveCompetencyResult = (doctorId: string, specialty: string, score: number, level: 'standard' | 'advanced') => {
+    const passed = score >= 70; // Pass threshold
+    alasql('INSERT INTO competency_results (doctor_id, specialty, score, level, passed, timestamp) VALUES (?, ?, ?, ?, ?, ?)',
+        [doctorId, specialty, score, level, passed, new Date().toISOString()]);
 };
 
 export const getDoctorCompetencyHistory = (doctorId: string): CompetencyResult[] => {
-    return alasql('SELECT * FROM competency_results WHERE doctor_id = ? ORDER BY date_taken DESC', [doctorId]);
+    return alasql('SELECT * FROM competency_results WHERE doctor_id = ? ORDER BY timestamp DESC', [doctorId]);
 };
 
-// Initialize
-try { initDB(); } catch (e) { console.error("DB Init Error", e); }
+// Initialize on load
+try {
+    initDB();
+} catch (e) {
+    console.error("Failed to initialize AlaSQL", e);
+}
