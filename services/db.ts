@@ -1,21 +1,28 @@
+
 import { MOCK_DOCTORS } from '../constants';
 import { User, Appointment } from '../types';
 
 declare var alasql: any;
 
 export const initDB = () => {
-  // Initialize Tables
-  alasql('CREATE TABLE IF NOT EXISTS users (id INT IDENTITY, name STRING, email STRING, password STRING, role STRING, doctorId STRING)');
-  alasql('CREATE TABLE IF NOT EXISTS appointments (id INT IDENTITY, doctor_id STRING, patient_id INT, patient_name STRING, date STRING, status STRING, condition_summary STRING)');
+  // Create a persistent LocalStorage database
+  alasql('CREATE LOCALSTORAGE DATABASE IF NOT EXISTS medimatch_db');
+  alasql('ATTACH LOCALSTORAGE DATABASE medimatch_db');
+  alasql('USE medimatch_db');
 
-  // Seed Doctors as Users if table is empty
+  // Initialize Tables if they don't exist
+  alasql('CREATE TABLE IF NOT EXISTS users (id INT IDENTITY, name STRING, email STRING, password STRING, role STRING, doctorId STRING)');
+  
+  // Updated Schema for Appointments
+  alasql('CREATE TABLE IF NOT EXISTS appointments (id INT IDENTITY, doctor_id STRING, patient_id INT, patient_name STRING, date STRING, time STRING, type STRING, payment_status STRING, payment_method STRING, amount MONEY, status STRING, condition_summary STRING)');
+
+  // Seed Data only if users table is empty
   const userCount = alasql('SELECT VALUE COUNT(*) FROM users');
   if (userCount === 0) {
-    console.log("Seeding Database...");
+    console.log("Seeding Persistent Database...");
     
     // Seed Doctors
     MOCK_DOCTORS.forEach(doc => {
-      // Create a predictable email: firstname.lastname@medimatch.com
       const email = doc.name.toLowerCase().replace('dr. ', '').replace(' ', '.') + '@medimatch.com';
       alasql('INSERT INTO users (name, email, password, role, doctorId) VALUES (?, ?, ?, ?, ?)', 
         [doc.name, email, 'password', 'doctor', doc.id]);
@@ -30,13 +37,11 @@ export const initDB = () => {
 };
 
 export const registerUser = (name: string, email: string, password: string, role: 'patient' | 'doctor') => {
-  // Check if email exists
   const exists = alasql('SELECT * FROM users WHERE email = ?', [email]);
   if (exists.length > 0) {
     throw new Error('Email already registered');
   }
   
-  // Insert
   const id = alasql('SELECT MAX(id) + 1 as id FROM users')[0].id || 1;
   alasql('INSERT INTO users (id, name, email, password, role) VALUES (?, ?, ?, ?, ?)', 
     [id, name, email, password, role]);
@@ -53,10 +58,22 @@ export const loginUser = (email: string, password: string): User | null => {
   return null;
 };
 
-export const createAppointment = (doctorId: string, patientId: number, patientName: string, condition: string) => {
-  const date = new Date().toISOString();
-  alasql('INSERT INTO appointments (doctor_id, patient_id, patient_name, date, status, condition_summary) VALUES (?, ?, ?, ?, ?, ?)',
-    [doctorId, patientId, patientName, date, 'confirmed', condition]);
+// Updated create function to handle detailed booking data
+export const createAppointment = (
+  doctorId: string, 
+  patientId: number, 
+  patientName: string, 
+  condition: string,
+  date: string,
+  time: string,
+  type: 'online' | 'in-person',
+  paymentMethod: 'pay_later' | 'paytm' | 'card' | 'netbanking',
+  amount: number
+) => {
+  const paymentStatus = paymentMethod === 'pay_later' ? 'pending' : 'paid';
+  
+  alasql('INSERT INTO appointments (doctor_id, patient_id, patient_name, date, time, type, payment_status, payment_method, amount, status, condition_summary) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
+    [doctorId, patientId, patientName, date, time, type, paymentStatus, paymentMethod, amount, 'confirmed', condition]);
 };
 
 export const updateAppointmentStatus = (appointmentId: number, status: 'confirmed' | 'completed' | 'cancelled') => {

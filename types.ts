@@ -42,8 +42,13 @@ export interface Appointment {
   doctor_id: string;
   patient_id: number;
   patient_name: string;
-  date: string;
-  status: 'pending' | 'confirmed' | 'completed';
+  date: string; // ISO Date string
+  time: string; // "10:00"
+  type: 'online' | 'in-person';
+  payment_status: 'paid' | 'pending';
+  payment_method: 'pay_later' | 'paytm' | 'card' | 'netbanking';
+  amount: number;
+  status: 'pending' | 'confirmed' | 'completed' | 'cancelled';
   condition_summary: string;
 }
 
