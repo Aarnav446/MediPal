@@ -1,0 +1,5 @@
+{
+  "name": "MediMatch AI",
+  "description": "An AI-powered health triage platform that matches user symptoms (text or image) to the correct medical specialist, urgency level, and nearby doctors using Google Gemini 2.5 Flash.",
+  "requestFramePermissions": []
+}
