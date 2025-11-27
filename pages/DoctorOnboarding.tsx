@@ -1,7 +1,6 @@
-
 import React, { useState } from 'react';
 import { useAuth } from '../context/AuthContext';
-import { registerUser } from '../services/db';
+import { registerUser, createDoctorProfile } from '../services/db';
 
 interface DoctorOnboardingProps {
   navigate: (path: string) => void;
@@ -31,7 +30,7 @@ const QUESTIONS = [
 ];
 
 const DoctorOnboarding: React.FC<DoctorOnboardingProps> = ({ navigate }) => {
-  const { login } = useAuth(); // We'll use login after manual register via db service
+  const { login } = useAuth();
   const [step, setStep] = useState(1);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
@@ -97,10 +96,21 @@ const DoctorOnboarding: React.FC<DoctorOnboardingProps> = ({ navigate }) => {
   const handleFinalRegister = async () => {
     setLoading(true);
     try {
-        // Register the user directly with 'verified' set to true (since they passed quiz and uploaded docs)
-        const newUser = registerUser(formData.name, formData.email, formData.password, 'doctor', true);
+        // 1. Create a Doctor Profile in the DB so they are searchable
+        // We use the ID returned here to link the User account
+        const doctorId = createDoctorProfile({
+            name: formData.name,
+            specialization: formData.specialty,
+            bio: `${formData.specialty} specializing in modern treatments. Clinic located at ${formData.clinicAddress}.`,
+            specialties: [formData.specialty, 'General Health'], // Simple default
+            verified: true, // Auto-verify since they passed the quiz/doc upload simulation
+            experience: '1 Year' // Default for new signups
+        });
+
+        // 2. Register User Account linked to the Doctor Profile
+        registerUser(formData.name, formData.email, formData.password, 'doctor', true, doctorId);
         
-        // Auto-login logic (using the context would be cleaner but for now let's use the DB then login)
+        // 3. Auto Login
         await login(formData.email, formData.password);
         
         navigate('/doctor-dashboard');

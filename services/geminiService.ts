@@ -1,6 +1,7 @@
 import { GoogleGenAI, Type } from "@google/genai";
 import { Doctor, AnalysisResult } from '../types';
-import { MOCK_DOCTORS, VALID_SPECIALIZATIONS } from '../constants';
+import { VALID_SPECIALIZATIONS } from '../constants';
+import { getAllDoctors } from './db';
 
 // Helper to convert File to Base64
 const fileToGenerativePart = async (file: File): Promise<{ inlineData: { data: string; mimeType: string } }> => {
@@ -119,18 +120,19 @@ export const analyzeSymptomsWithGemini = async (
         }
     }
 
-    // Post-processing: Match with mock database
+    // Post-processing: Match with Database doctors
+    const allDoctors = getAllDoctors();
     const specialistStr = aiResult.specialist ? aiResult.specialist.trim() : "General Practitioner";
     const conditions: string[] = aiResult.potential_conditions || [];
 
     // 1. Filter by Specialization
-    let matchedDoctors = MOCK_DOCTORS.filter(
+    let matchedDoctors = allDoctors.filter(
       (doc) => doc.specialization.toLowerCase() === specialistStr.toLowerCase()
     );
 
-    // Fallback: If no specific specialist found in mock DB, show GPs
+    // Fallback: If no specific specialist found in DB, show GPs
     if (matchedDoctors.length === 0) {
-      matchedDoctors = MOCK_DOCTORS.filter(
+      matchedDoctors = allDoctors.filter(
         (doc) => doc.specialization === 'General Practitioner'
       );
     }
@@ -189,7 +191,7 @@ export const analyzeSymptomsWithGemini = async (
       urgency: "Low",
       explanation: "We encountered an error analyzing your symptoms. Please consult a General Practitioner directly. (Error: " + (error as Error).message + ")",
       potential_conditions: [],
-      recommended_doctors: MOCK_DOCTORS.filter(d => d.specialization === 'General Practitioner').slice(0,3).map(d => ({...d, compatibility_score: 50})),
+      recommended_doctors: [],
       recommended_treatment_type: "Consultation",
       treatment_reasoning: "Please consult a doctor for a proper treatment plan."
     };
