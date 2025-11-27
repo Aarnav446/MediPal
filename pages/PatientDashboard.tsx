@@ -34,6 +34,9 @@ const PatientDashboard: React.FC = () => {
     );
   }
 
+  const upcoming = appointments.filter(a => a.status === 'confirmed');
+  const history = appointments.filter(a => a.status !== 'confirmed');
+
   return (
     <div className="max-w-7xl mx-auto px-4 py-10 sm:px-6 lg:px-8 min-h-screen bg-slate-50">
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-10 gap-4">
@@ -50,13 +53,13 @@ const PatientDashboard: React.FC = () => {
         </a>
       </div>
 
-      <div className="grid grid-cols-1 gap-6">
-        {/* Appointments Section */}
+      <div className="space-y-8">
+        
+        {/* Upcoming Appointments */}
         <div className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
             <div className="px-6 py-5 border-b border-slate-100 flex justify-between items-center bg-slate-50/50">
                 <h3 className="text-lg font-bold text-slate-800 flex items-center gap-2">
-                    <svg className="w-5 h-5 text-medical-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" /></svg>
-                    Your Appointments
+                    Upcoming Appointments
                 </h3>
             </div>
             
@@ -64,17 +67,17 @@ const PatientDashboard: React.FC = () => {
                  <div className="flex justify-center py-12">
                     <svg className="animate-spin h-8 w-8 text-medical-500" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>
                  </div>
-            ) : appointments.length === 0 ? (
+            ) : upcoming.length === 0 ? (
                 <div className="p-16 text-center text-slate-500 flex flex-col items-center">
                     <div className="w-16 h-16 bg-slate-100 rounded-full flex items-center justify-center mb-4 text-slate-400">
                         <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
                     </div>
-                    <p className="text-lg font-medium text-slate-700">No appointments yet</p>
+                    <p className="text-lg font-medium text-slate-700">No upcoming appointments</p>
                     <p className="text-sm mt-1">Use the symptom checker to find a specialist.</p>
                 </div>
             ) : (
                 <div className="divide-y divide-slate-100">
-                    {appointments.map((apt) => {
+                    {upcoming.map((apt) => {
                         const doctor = getDoctorDetails(apt.doctor_id);
                         return (
                             <div key={apt.id} className="p-6 hover:bg-slate-50 transition-colors flex flex-col md:flex-row gap-6 md:items-center">
@@ -110,6 +113,32 @@ const PatientDashboard: React.FC = () => {
                 </div>
             )}
         </div>
+
+        {/* Past History */}
+        {history.length > 0 && (
+             <div className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden opacity-90">
+                <div className="px-6 py-4 border-b border-slate-100 bg-slate-50">
+                    <h3 className="text-md font-bold text-slate-600">Past Appointments</h3>
+                </div>
+                <div className="divide-y divide-slate-100">
+                    {history.map((apt) => {
+                         const doctor = getDoctorDetails(apt.doctor_id);
+                         return (
+                            <div key={apt.id} className="p-4 flex justify-between items-center text-sm">
+                                <div>
+                                    <span className="font-bold text-slate-800">{doctor.name}</span>
+                                    <span className="text-slate-500 mx-2">-</span>
+                                    <span className="text-slate-500">{new Date(apt.date).toLocaleDateString()}</span>
+                                </div>
+                                <span className={`px-2 py-0.5 rounded text-xs font-semibold ${apt.status === 'completed' ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}`}>
+                                    {apt.status}
+                                </span>
+                            </div>
+                         )
+                    })}
+                </div>
+             </div>
+        )}
       </div>
     </div>
   );

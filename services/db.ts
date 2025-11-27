@@ -59,6 +59,10 @@ export const createAppointment = (doctorId: string, patientId: number, patientNa
     [doctorId, patientId, patientName, date, 'confirmed', condition]);
 };
 
+export const updateAppointmentStatus = (appointmentId: number, status: 'confirmed' | 'completed' | 'cancelled') => {
+  alasql('UPDATE appointments SET status = ? WHERE id = ?', [status, appointmentId]);
+};
+
 export const getDoctorAppointments = (doctorId: string): Appointment[] => {
   return alasql('SELECT * FROM appointments WHERE doctor_id = ? ORDER BY date DESC', [doctorId]);
 };

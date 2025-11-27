@@ -43,8 +43,8 @@ export const analyzeSymptomsWithGemini = async (
     3. Determine the urgency level (Low, Medium, or High).
     4. Provide a detailed, empathetic, and personalized explanation.
     5. List 1-3 potential medical conditions (diseases or issues) that match these symptoms (e.g., "Psoriasis", "Migraine", "Hypertension"). BE VERY SPECIFIC with disease names.
-    6. Determine the "Best Proper Curable Type". Which medical system (Allopathy, Ayurveda, Homeopathy, Surgery, Physiotherapy) provides the most definitive and fastest CURE for this specific condition based on medical consensus?
-    7. Provide a reasoning for this treatment choice, focusing on "how to cure it best and faster".
+    6. Determine the "Best Proper Curable Type". Conduct a simulated assessment of Allopathy vs Ayurveda vs Homeopathy vs Other modalities for this SPECIFIC condition. Recommendation should be based on speed of relief and long-term cure efficacy.
+    7. Provide a reasoning for this treatment choice, answering "how to cure it best and faster".
 
     The 'specialist' field MUST be one of the following strings exactly:
     ${JSON.stringify(VALID_SPECIALIZATIONS)}
@@ -147,13 +147,18 @@ export const analyzeSymptomsWithGemini = async (
       const docText = (doc.specialties.join(' ') + ' ' + doc.bio).toLowerCase();
       
       conditions.forEach(cond => {
+        // Simple string inclusion
         if (docText.includes(cond.toLowerCase())) {
           matches += 1;
         }
+        // Check for partial matches (e.g., "psoriatic" matching "psoriasis")
+        if (cond.length > 5 && docText.includes(cond.substring(0, cond.length - 2).toLowerCase())) {
+             matches += 0.5;
+        }
       });
       
-      // Add 20 points per match (aggressive weighting for experts), cap at 99
-      const finalScore = Math.min(99, score + (matches * 20));
+      // Add 25 points per match (aggressive weighting for experts), cap at 99
+      const finalScore = Math.min(99, score + (matches * 25));
       
       return { ...doc, compatibility_score: finalScore };
     });
