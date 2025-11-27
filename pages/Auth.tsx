@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { useAuth } from '../context/AuthContext';
 
@@ -32,7 +33,7 @@ const AuthPage: React.FC<AuthPageProps> = ({ navigate }) => {
         await login(email, password);
         
         // Handle explicit admin redirect
-        if (email === 'admin@gmail.com') {
+        if (email.toLowerCase() === 'admin@gmail.com') {
             navigate('/admin-dashboard');
         } else {
             navigate('/'); 

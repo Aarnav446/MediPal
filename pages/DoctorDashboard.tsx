@@ -263,7 +263,15 @@ const DoctorDashboard: React.FC = () => {
                   <div className="bg-white p-6 rounded-xl border border-slate-200 shadow-sm">
                       <div className="flex justify-between items-center mb-4">
                           <h3 className="font-bold text-lg text-slate-900">Clinical Competency</h3>
-                          <a href="#/join-doctor" className="text-sm text-indigo-600 font-bold hover:underline">Retake Assessment</a>
+                          
+                          {/* New Prominent Update Button */}
+                          <a 
+                            href="#/join-doctor" 
+                            className="flex items-center gap-2 px-4 py-2 bg-indigo-600 text-white rounded-lg shadow hover:bg-indigo-700 transition-colors text-sm font-bold"
+                          >
+                              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" /></svg>
+                              Update Profile & Competency
+                          </a>
                       </div>
                       
                       <div className="mb-4">

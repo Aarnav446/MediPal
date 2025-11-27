@@ -32,35 +32,47 @@ export const initDB = () => {
   alasql('DELETE FROM doctors WHERE name LIKE "%John Doe%" OR name LIKE "%Aarnav%"');
   alasql('DELETE FROM users WHERE name LIKE "%John Doe%" OR name LIKE "%Aarnav%"');
   
-  // Seed Data only if users table is empty
+  // CRITICAL: Ensure Admin User Exists
+  const adminExists = alasql('SELECT * FROM users WHERE email = "admin@gmail.com"');
+  if (adminExists.length === 0) {
+      console.log("Seeding Admin User...");
+      alasql('INSERT INTO users (name, email, password, role) VALUES (?, ?, ?, ?)',
+      ['Super Admin', 'admin@gmail.com', 'password', 'admin']);
+  }
+
+  // Seed Data only if users table is empty (except admin check above)
   const userCount = alasql('SELECT VALUE COUNT(*) FROM users');
-  if (userCount === 0) {
+  // If only admin exists or table empty, seed mocks
+  if (userCount <= 1) {
     console.log("Seeding Persistent Database...");
     
     // Seed Doctors into Users and Doctors tables
     MOCK_DOCTORS.forEach(doc => {
-      const email = doc.name.toLowerCase().replace('dr. ', '').replace(' ', '.') + '@medimatch.com';
-      
-      // Add to Users
-      alasql('INSERT INTO users (name, email, password, role, doctorId, verified) VALUES (?, ?, ?, ?, ?, ?, ?)', 
-        [doc.name, email, 'password', 'doctor', doc.id, doc.verified]);
-      
-      // Add to Doctors
-      alasql('INSERT INTO doctors VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
-        [doc.id, doc.name, doc.specialization, doc.experience, doc.rating, doc.distance, doc.imageUrl, doc.available, doc.bio, JSON.stringify(doc.specialties), doc.verified, 0]);
+      // Check if doc already exists to avoid duplicates
+      const docExists = alasql('SELECT * FROM doctors WHERE id = ?', [doc.id]);
+      if (docExists.length === 0) {
+          const email = doc.name.toLowerCase().replace('dr. ', '').replace(' ', '.') + '@medimatch.com';
+          
+          // Add to Users
+          alasql('INSERT INTO users (name, email, password, role, doctorId, verified) VALUES (?, ?, ?, ?, ?, ?, ?)', 
+            [doc.name, email, 'password', 'doctor', doc.id, doc.verified]);
+          
+          // Add to Doctors
+          alasql('INSERT INTO doctors VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
+            [doc.id, doc.name, doc.specialization, doc.experience, doc.rating, doc.distance, doc.imageUrl, doc.available, doc.bio, JSON.stringify(doc.specialties), doc.verified, 0]);
 
-      // Default Settings
-      alasql('INSERT INTO doctor_settings (doctor_id, consultation_modes, time_slots) VALUES (?, ?, ?)',
-        [doc.id, JSON.stringify({ online: true, clinic: true }), JSON.stringify(['09:00', '10:00', '11:00', '14:00', '15:00', '16:00'])]);
+          // Default Settings
+          alasql('INSERT INTO doctor_settings (doctor_id, consultation_modes, time_slots) VALUES (?, ?, ?)',
+            [doc.id, JSON.stringify({ online: true, clinic: true }), JSON.stringify(['09:00', '10:00', '11:00', '14:00', '15:00', '16:00'])]);
+      }
     });
 
     // Seed a demo Patient
-    alasql('INSERT INTO users (name, email, password, role) VALUES (?, ?, ?, ?)',
-      ['Demo Patient', 'patient@demo.com', 'password', 'patient']);
-
-    // Seed a demo Admin - Specific Email
-    alasql('INSERT INTO users (name, email, password, role) VALUES (?, ?, ?, ?)',
-      ['Super Admin', 'admin@gmail.com', 'password', 'admin']);
+    const patientExists = alasql('SELECT * FROM users WHERE email = "patient@demo.com"');
+    if (patientExists.length === 0) {
+        alasql('INSERT INTO users (name, email, password, role) VALUES (?, ?, ?, ?)',
+        ['Demo Patient', 'patient@demo.com', 'password', 'patient']);
+    }
       
     console.log("Database Seeded.");
   }
