@@ -10,8 +10,8 @@ interface DoctorOnboardingProps {
 interface Question {
   id: string;
   type: 'general' | 'case_study';
-  title?: string; // For case studies (e.g. "Patient Case #102")
-  vignette?: string; // The practical scenario
+  title?: string;
+  vignette?: string;
   question: string;
   options: string[];
   correct: number;
@@ -30,7 +30,16 @@ const SPECIALTY_CASES: Record<string, Question[]> = {
             vignette: "A 45-year-old male with severe plaque psoriasis (PASI 22) has failed Methotrexate and narrow-band UVB therapy. He has a history of latent TB (treated). He presents with new onset joint pain in the fingers.",
             question: "Considering his history and new symptoms, which biologic mechanism is most appropriate to initiate next?",
             options: ["TNF-alpha inhibitor (e.g., Adalimumab)", "IL-17A inhibitor (e.g., Secukinumab)", "Systemic Corticosteroids", "Topical Calcipotriene monotherapy"],
-            correct: 1 // IL-17 often preferred for psoriatic arthritis + skin, TNF caution with TB history (though treated)
+            correct: 1
+        },
+        {
+            id: 'pso-2',
+            type: 'case_study',
+            title: 'Guttate Psoriasis Flare',
+            vignette: "A 12-year-old boy presents with sudden eruption of small scaling papules over trunk and limbs 2 weeks after a sore throat.",
+            question: "Most appropriate initial diagnostic step?",
+            options: ["Skin Biopsy", "ASO Titer & Throat Culture", "Serum Uric Acid", "ANA Profile"],
+            correct: 1
         }
     ],
     'Acne': [
@@ -76,7 +85,7 @@ const SPECIALTY_CASES: Record<string, Question[]> = {
             vignette: "Patient arrives with Inferior STEMI (ST elevation II, III, aVF). BP is 80/50 mmHg. Lungs are clear.",
             question: "Which medication is CONTRAINDICATED in the immediate management?",
             options: ["Aspirin", "Nitroglycerin", "Heparin", "IV Fluids"],
-            correct: 1 // Nitrates contraindicated in RV infarction (common with Inferior MI) due to preload dependence
+            correct: 1
         }
     ],
 
@@ -109,6 +118,13 @@ const GENERAL_SPECIALTY_QUESTIONS: Record<string, Question[]> = {
             type: 'general',
             question: "Which sign is pathognomonic for Pemphigus Vulgaris?",
             options: ["Auspitz Sign", "Nikolsky Sign", "Darier's Sign", "Koebner Phenomenon"],
+            correct: 1
+        },
+        {
+            id: 'derm-gen-3',
+            type: 'general',
+            question: "Wood's lamp examination of Tinea Capitis typically shows which fluorescence?",
+            options: ["Coral Red", "Green", "Yellow", "Blue"],
             correct: 1
         }
     ],
@@ -145,6 +161,13 @@ const BASE_MEDICAL_QUESTIONS: Question[] = [
         type: 'general',
         question: "A patient develops urticaria and wheezing 5 minutes after an injection. First line treatment?",
         options: ["IV Corticosteroids", "IM Epinephrine", "Oral Antihistamines", "Albuterol Nebulizer"],
+        correct: 1
+    },
+    {
+        id: 'base-2',
+        type: 'general',
+        question: "Normal potassium level range is:",
+        options: ["2.0 - 3.5 mEq/L", "3.5 - 5.0 mEq/L", "5.0 - 6.5 mEq/L", "135 - 145 mEq/L"],
         correct: 1
     }
 ];
@@ -203,32 +226,50 @@ const DoctorOnboarding: React.FC<DoctorOnboardingProps> = ({ navigate }) => {
       }
   }, [user]);
 
+  // Helper to shuffle array
+  const shuffleArray = (array: Question[]) => {
+      for (let i = array.length - 1; i > 0; i--) {
+          const j = Math.floor(Math.random() * (i + 1));
+          [array[i], array[j]] = [array[j], array[i]];
+      }
+      return array;
+  };
+
   // GENERATE ADAPTIVE TEST
   useEffect(() => {
     let pool: Question[] = [];
 
-    // 1. Add General Specialty Questions
+    // 1. Add General Specialty Questions (Randomized)
     if (formData.specialty && GENERAL_SPECIALTY_QUESTIONS[formData.specialty]) {
-        pool = [...GENERAL_SPECIALTY_QUESTIONS[formData.specialty]];
+        const genQs = [...GENERAL_SPECIALTY_QUESTIONS[formData.specialty]];
+        pool = [...pool, ...shuffleArray(genQs)];
     } else {
-        pool = [...BASE_MEDICAL_QUESTIONS];
+        pool = [...pool, ...BASE_MEDICAL_QUESTIONS];
     }
 
-    // 2. Add Practical Case Studies based on Sub-Specialties
-    // This is the "Hard/Practical" adaptation
+    // 2. Add Practical Case Studies based on Sub-Specialties (Randomized)
+    const specificQs: Question[] = [];
     formData.subSpecialties.forEach(sub => {
         if (SPECIALTY_CASES[sub]) {
-            pool.push(...SPECIALTY_CASES[sub]);
+            specificQs.push(...SPECIALTY_CASES[sub]);
         }
     });
 
-    // If pool is too small, pad with generic medical logic questions (Mock logic)
-    if (pool.length < 3) {
-        pool.push(...BASE_MEDICAL_QUESTIONS);
+    if (specificQs.length > 0) {
+        // Ensure at least 1-2 hard specific questions are included
+        pool = [...pool, ...shuffleArray(specificQs)];
     }
+
+    // Limit Pool Size (e.g., max 5 questions) for UX
+    // Prioritize showing at least 1 specific if available
+    const finalSelection = pool.slice(0, 5);
     
-    setQuestions(pool);
-    setAnswers(new Array(pool.length).fill(-1));
+    // Ensure uniqueness just in case
+    const uniqueQuestions = Array.from(new Set(finalSelection.map(q => q.id)))
+        .map(id => finalSelection.find(q => q.id === id)!);
+
+    setQuestions(uniqueQuestions);
+    setAnswers(new Array(uniqueQuestions.length).fill(-1));
   }, [formData.specialty, formData.subSpecialties]);
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
@@ -258,7 +299,8 @@ const DoctorOnboarding: React.FC<DoctorOnboardingProps> = ({ navigate }) => {
       if (questions[idx] && ans === questions[idx].correct) correctCount++;
     });
     
-    const percentage = (correctCount / questions.length) * 100;
+    // Calculate score
+    const percentage = questions.length > 0 ? (correctCount / questions.length) * 100 : 0;
     setScore(percentage);
     setStep(4);
   };
@@ -462,7 +504,7 @@ const DoctorOnboarding: React.FC<DoctorOnboardingProps> = ({ navigate }) => {
                             </p>
                         </div>
                         <div className="bg-white/10 px-3 py-1 rounded text-xs font-mono">
-                            Q: {questions.length} | Est. Time: 5m
+                            Q: {questions.length} | Est. Time: {questions.length}m
                         </div>
                     </div>
                 </div>

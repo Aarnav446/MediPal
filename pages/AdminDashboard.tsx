@@ -1,14 +1,18 @@
-
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { VerificationRequest } from '../types';
 import { getVerificationRequests, verifyDoctor } from '../services/db';
+import { validateDocumentWithAI } from '../services/geminiService';
 
 const AdminDashboard: React.FC = () => {
   const { user } = useAuth();
   const [requests, setRequests] = useState<VerificationRequest[]>([]);
   const [rejectingId, setRejectingId] = useState<number | null>(null);
   const [rejectReason, setRejectReason] = useState('');
+  
+  // AI Scan State
+  const [scanningId, setScanningId] = useState<number | null>(null);
+  const [scanResult, setScanResult] = useState<any | null>(null);
 
   // Simple hardcoded check for admin in this demo. 
   // In real app, role would be checked securely.
@@ -24,12 +28,14 @@ const AdminDashboard: React.FC = () => {
       if (confirm("Are you sure you want to verify this doctor?")) {
         verifyDoctor(reqId, docId, true);
         setRequests(prev => prev.filter(r => r.id !== reqId));
+        setScanResult(null);
       }
   };
 
   const handleRejectClick = (reqId: number) => {
       setRejectingId(reqId);
       setRejectReason('');
+      setScanResult(null);
   };
 
   const submitRejection = (reqId: number, docId: string) => {
@@ -40,6 +46,21 @@ const AdminDashboard: React.FC = () => {
       verifyDoctor(reqId, docId, false, rejectReason);
       setRequests(prev => prev.filter(r => r.id !== reqId));
       setRejectingId(null);
+  };
+
+  const handleAIScan = async (req: VerificationRequest) => {
+      setScanningId(req.id);
+      setScanResult(null);
+      
+      try {
+          // Simulate analyzing the license file
+          const result = await validateDocumentWithAI("Medical License", req.license_file, req.doctor_name);
+          setScanResult(result);
+      } catch (e) {
+          alert("AI Scan failed");
+      } finally {
+          setScanningId(null);
+      }
   };
 
   if (!isAdmin) {
@@ -86,6 +107,20 @@ const AdminDashboard: React.FC = () => {
                                       <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 14l9-5-9-5-9 5 9 5z" /><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 14l6.16-3.422a12.083 12.083 0 01.665 6.479A11.952 11.952 0 0012 20.055a11.952 11.952 0 00-6.824-2.998 12.078 12.078 0 01.665-6.479L12 14z" /></svg>
                                       {req.degree_file} (Preview)
                                   </a>
+                                  
+                                  {/* AI Scan Button */}
+                                  <button 
+                                      onClick={() => handleAIScan(req)}
+                                      disabled={scanningId === req.id}
+                                      className="mt-2 w-full flex items-center justify-center gap-2 px-3 py-2 bg-slate-800 text-white text-xs font-bold rounded hover:bg-slate-900 transition-colors"
+                                  >
+                                      {scanningId === req.id ? (
+                                           <svg className="animate-spin h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>
+                                      ) : (
+                                           <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+                                      )}
+                                      AI Security Scan
+                                  </button>
                               </div>
 
                               {/* Actions */}
@@ -128,6 +163,31 @@ const AdminDashboard: React.FC = () => {
                                   )}
                               </div>
                           </div>
+                          
+                          {/* Scan Result Display */}
+                          {scanResult && scanningId !== req.id && (
+                              <div className="mt-4 bg-slate-50 rounded-lg p-4 border border-slate-200 animate-fade-in">
+                                  <div className="flex items-center gap-2 mb-2">
+                                      <span className="font-bold text-sm text-slate-800">AI Analysis Report</span>
+                                      <span className={`text-xs px-2 py-0.5 rounded-full font-bold ${
+                                          scanResult.verdict === 'Authentic' ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'
+                                      }`}>
+                                          {scanResult.verdict}
+                                      </span>
+                                      <span className="text-xs text-slate-500 ml-auto">Score: {scanResult.authenticity_score}/100</span>
+                                  </div>
+                                  <p className="text-sm text-slate-600 mb-2">{scanResult.reasoning}</p>
+                                  {scanResult.flags && scanResult.flags.length > 0 && (
+                                      <div className="flex flex-wrap gap-2">
+                                          {scanResult.flags.map((flag: string, i: number) => (
+                                              <span key={i} className="text-xs bg-white border border-slate-200 px-2 py-1 rounded text-slate-500">
+                                                  {flag}
+                                              </span>
+                                          ))}
+                                      </div>
+                                  )}
+                              </div>
+                          )}
                       </div>
                   ))}
               </div>

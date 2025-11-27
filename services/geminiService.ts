@@ -197,3 +197,76 @@ export const analyzeSymptomsWithGemini = async (
     };
   }
 };
+
+// --- DOCUMENT VERIFICATION ---
+export const validateDocumentWithAI = async (docType: string, fileName: string, doctorName: string) => {
+    if (!process.env.API_KEY) {
+        throw new Error("API Key missing");
+    }
+
+    const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+    
+    // In a real scenario, we would upload the file bytes. 
+    // Here we simulate the analysis based on metadata for the prototype.
+    const prompt = `
+        You are an AI Forensic Document Examiner.
+        I am providing metadata for a document uploaded by a doctor for verification.
+        
+        Doctor Name: ${doctorName}
+        Document Type: ${docType}
+        File Name: ${fileName}
+
+        Please generate a SIMULATED forensic analysis report for this document.
+        Assume the document is mostly authentic but occasionally flag minor issues for realism.
+
+        Return JSON with:
+        1. authenticity_score (0-100)
+        2. verdict (Authentic / Suspicious / Fake)
+        3. flags (Array of strings, e.g., "Mismatched fonts", "Blurry seal", "Valid watermark detected")
+        4. reasoning (Short paragraph explaining the analysis)
+    `;
+
+    const schema = {
+        type: Type.OBJECT,
+        properties: {
+            authenticity_score: { type: Type.INTEGER },
+            verdict: { type: Type.STRING },
+            flags: { type: Type.ARRAY, items: { type: Type.STRING } },
+            reasoning: { type: Type.STRING }
+        },
+        required: ["authenticity_score", "verdict", "flags", "reasoning"]
+    };
+
+    try {
+        const response = await ai.models.generateContent({
+            model: 'gemini-2.5-flash',
+            contents: { parts: [{ text: prompt }] },
+            config: {
+                responseMimeType: "application/json",
+                responseSchema: schema,
+                temperature: 0.4
+            }
+        });
+
+        if (!response.text) throw new Error("No AI response");
+        
+        // Sanitize
+        let cleanText = response.text.trim();
+        if (cleanText.startsWith('```json')) {
+            cleanText = cleanText.replace(/^```json\n/, '').replace(/\n```$/, '');
+        } else if (cleanText.startsWith('```')) {
+            cleanText = cleanText.replace(/^```\n/, '').replace(/\n```$/, '');
+        }
+
+        return JSON.parse(cleanText);
+
+    } catch (error) {
+        console.error("Doc Verification Error:", error);
+        return {
+            authenticity_score: 85,
+            verdict: "Authentic",
+            flags: ["Simulation Fallback"],
+            reasoning: "AI Analysis unavailable. Defaulting to authentic status for demo."
+        };
+    }
+};

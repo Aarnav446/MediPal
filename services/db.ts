@@ -32,9 +32,6 @@ export const initDB = () => {
   alasql('DELETE FROM doctors WHERE name LIKE "%John Doe%" OR name LIKE "%Aarnav%"');
   alasql('DELETE FROM users WHERE name LIKE "%John Doe%" OR name LIKE "%Aarnav%"');
   
-  // Clean up duplicate seed data if it exists (simple dedup strategy)
-  // (In a real app, we'd use constraints, but for Alasql localStorage, we check before insert below)
-
   // Seed Data only if users table is empty
   const userCount = alasql('SELECT VALUE COUNT(*) FROM users');
   if (userCount === 0) {
@@ -61,9 +58,9 @@ export const initDB = () => {
     alasql('INSERT INTO users (name, email, password, role) VALUES (?, ?, ?, ?)',
       ['Demo Patient', 'patient@demo.com', 'password', 'patient']);
 
-    // Seed a demo Admin
+    // Seed a demo Admin - Specific Email
     alasql('INSERT INTO users (name, email, password, role) VALUES (?, ?, ?, ?)',
-      ['Admin User', 'admin@medimatch.com', 'password', 'admin']);
+      ['Super Admin', 'admin@gmail.com', 'password', 'admin']);
       
     console.log("Database Seeded.");
   }
@@ -134,6 +131,11 @@ export const updateDoctorProfile = (doctorId: string, updates: Partial<Doctor>) 
 // --- AUTH FUNCTIONS ---
 
 export const registerUser = (name: string, email: string, password: string, role: 'patient' | 'doctor', verified: boolean = false, doctorId?: string) => {
+  // Block admin email registration
+  if (email.toLowerCase() === 'admin@gmail.com') {
+      throw new Error("This email is restricted.");
+  }
+
   const exists = alasql('SELECT * FROM users WHERE email = ?', [email]);
   if (exists.length > 0) {
     throw new Error('Email already registered');
@@ -212,7 +214,6 @@ export const getDoctorSettings = (doctorId: string) => {
 // --- VERIFICATION & COMPETENCY FUNCTIONS ---
 
 export const createVerificationRequest = (doctorId: string, doctorName: string, licenseName: string, degreeName: string) => {
-    // Check if pending exists
     const existing = alasql('SELECT * FROM verification_requests WHERE doctor_id = ? AND status = "pending"', [doctorId]);
     if (existing.length === 0) {
         alasql('INSERT INTO verification_requests (doctor_id, doctor_name, license_file, degree_file, status, submitted_at, rejection_reason) VALUES (?, ?, ?, ?, ?, ?, ?)',
@@ -236,11 +237,12 @@ export const verifyDoctor = (requestId: number, doctorId: string, approve: boole
     
     if (approve) {
         alasql('UPDATE doctors SET verified = TRUE WHERE id = ?', [doctorId]);
+        alasql('UPDATE users SET verified = TRUE WHERE doctorId = ?', [doctorId]);
     }
 };
 
 export const saveCompetencyResult = (doctorId: string, specialty: string, score: number, level: 'standard' | 'advanced') => {
-    const passed = score >= 70; // Pass threshold
+    const passed = score >= 70;
     alasql('INSERT INTO competency_results (doctor_id, specialty, score, level, passed, timestamp) VALUES (?, ?, ?, ?, ?, ?)',
         [doctorId, specialty, score, level, passed, new Date().toISOString()]);
 };
